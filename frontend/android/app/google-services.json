@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "719150668758",
+    "project_id": "circlehome-8de10",
+    "storage_bucket": "circlehome-8de10.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:719150668758:android:919f36bcc59d7b6765a277",
+        "android_client_info": {
+          "package_name": "com.example.circlehome"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyArWi11WoDuTzWpvEJOteKKNNaRT8XkhHw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
