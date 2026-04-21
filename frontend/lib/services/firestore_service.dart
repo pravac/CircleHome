@@ -19,6 +19,13 @@ class FirestoreService {
         .snapshots();
   }
 
+  Stream<QuerySnapshot> getAllTasks(String householdId) {
+    return _db
+        .collection('tasks')
+        .where('householdId', isEqualTo: householdId)
+        .snapshots();
+  }
+
   Stream<QuerySnapshot> getActivities(String householdId) {
     return _db
         .collection('activities')

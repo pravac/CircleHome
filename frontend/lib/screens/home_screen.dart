@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import 'create_household_screen.dart';
 import 'join_household_screen.dart';
+import 'task_feed_screen.dart';
 import 'package:flutter/services.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -437,9 +438,28 @@ class HomeScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "My Tasks",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        Builder(
+          builder: (context) => Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  "My Tasks",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        TaskFeedScreen(householdId: householdId),
+                  ),
+                ),
+                icon: const Icon(Icons.list_alt, size: 16),
+                label: const Text('View All'),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 14),
         StreamBuilder<QuerySnapshot>(
@@ -973,23 +993,46 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildSidebar() {
-    return Container(
-      width: 90,
-      color: Colors.white,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Icon(Icons.home, size: 30),
-          SizedBox(height: 30),
-          Icon(Icons.check_box),
-          SizedBox(height: 30),
-          Icon(Icons.favorite),
-          SizedBox(height: 30),
-          Icon(Icons.people),
-          SizedBox(height: 30),
-          Icon(Icons.settings),
-        ],
-      ),
+    return Builder(
+      builder: (context) {
+        final householdFuture = FirestoreService().getHouseholdIdForUser(
+          FirebaseAuth.instance.currentUser!.uid,
+        );
+
+        return Container(
+          width: 90,
+          color: Colors.white,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.home, size: 30),
+              const SizedBox(height: 30),
+              FutureBuilder<String?>(
+                future: householdFuture,
+                builder: (context, snap) => IconButton(
+                  icon: const Icon(Icons.check_box),
+                  tooltip: 'All Tasks',
+                  onPressed: snap.data != null && snap.data!.isNotEmpty
+                      ? () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  TaskFeedScreen(householdId: snap.data!),
+                            ),
+                          )
+                      : null,
+                ),
+              ),
+              const SizedBox(height: 30),
+              const Icon(Icons.favorite),
+              const SizedBox(height: 30),
+              const Icon(Icons.people),
+              const SizedBox(height: 30),
+              const Icon(Icons.settings),
+            ],
+          ),
+        );
+      },
     );
   }
 }
