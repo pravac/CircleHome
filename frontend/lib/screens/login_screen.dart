@@ -88,9 +88,9 @@ class _LoginScreenState extends State<LoginScreen> {
             );
 
             await FirestoreService().createUserDocument(
-            uid: credential.user!.uid,
-            email: credential.user!.email ?? _emailController.text.trim(),
-            householdId: credential.user!.uid,
+              uid: credential.user!.uid,
+              email: credential.user!.email ?? _emailController.text.trim(),
+              householdId: '',
             );
 
             _showMessage('Account created successfully.');
@@ -252,7 +252,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               clipBehavior: Clip.antiAlias,
               child: Image.asset(
-                'assets/images/circlehome_logo.png',
+                'lib/assets/images/CircleHomeLogo.png',
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) {
                   return const Icon(

@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import 'create_household_screen.dart';
+import 'join_household_screen.dart';
+import 'package:flutter/services.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -30,9 +33,104 @@ class HomeScreen extends StatelessWidget {
 
         final householdId = householdSnapshot.data;
 
-        if (householdId == null) {
-          return const Scaffold(
-            body: Center(child: Text('No household found for user')),
+        if (householdId == null || householdId.isEmpty) {
+          return Scaffold(
+            backgroundColor: const Color(0xFFF4F6FB),
+            body: Center(
+              child: Container(
+                width: 520,
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Welcome to CircleHome',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'You are not currently in a household. Create one or join one using an invite code.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.grey.shade700,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              final created = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const CreateHouseholdScreen(),
+                                ),
+                              );
+
+                              if (created == true && context.mounted) {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const HomeScreen(),
+                                  ),
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              padding: const EdgeInsets.symmetric(vertical: 18),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: const Text('Create Household'),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              final joined = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const JoinHouseholdScreen(),
+                                ),
+                              );
+
+                              if (joined == true && context.mounted) {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const HomeScreen(),
+                                  ),
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              padding: const EdgeInsets.symmetric(vertical: 18),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: const Text('Join Household'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           );
         }
 
@@ -55,6 +153,8 @@ class HomeScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildHeader(),
+                            const SizedBox(height: 16),
+                            _buildHouseholdCard(context, householdId),
                             const SizedBox(height: 24),
                             _buildSummaryCards(householdId),
                             const SizedBox(height: 28),
@@ -85,7 +185,7 @@ class HomeScreen extends StatelessWidget {
         const CircleAvatar(
           radius: 28,
           backgroundColor: Colors.white,
-          child: Icon(Icons.home, size: 30),
+          backgroundImage: AssetImage('lib/assets/images/CircleHomeLogo.png'),
         ),
         const SizedBox(width: 12),
         const Expanded(
@@ -106,6 +206,180 @@ class HomeScreen extends StatelessWidget {
           },
         ),
       ],
+    );
+  }
+
+  Widget _buildHouseholdCard(BuildContext context, String householdId) {
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: FirestoreService().getHousehold(householdId),
+      builder: (context, householdSnapshot) {
+        if (!householdSnapshot.hasData) {
+          return const SizedBox();
+        }
+
+        final householdData = householdSnapshot.data!;
+        final name = householdData['name'] ?? 'Household';
+        final code = householdData['code'] ?? '';
+
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirestoreService().getHouseholdMembers(householdId),
+          builder: (context, memberSnapshot) {
+            final memberDocs = memberSnapshot.data?.docs ?? [];
+            final memberCount = memberDocs.length;
+
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final created = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const CreateHouseholdScreen(),
+                            ),
+                          );
+
+                          if (created == true && context.mounted) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const HomeScreen(),
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                        ),
+                        child: const Text('Create New'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final joined = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const JoinHouseholdScreen(),
+                            ),
+                          );
+
+                          if (joined == true && context.mounted) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const HomeScreen(),
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                        ),
+                        child: const Text('Join'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  Row(
+                    children: [
+                      Text(
+                        'Invite Code: $code',
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.copy, size: 18),
+                        tooltip: 'Copy code',
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: code));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Invite code copied!'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 6),
+                  Text(
+                    '$memberCount member${memberCount == 1 ? '' : 's'} in household',
+                    style: TextStyle(
+                      color: Colors.grey.shade700,
+                      fontSize: 15,
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: memberDocs.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final displayName =
+                          (data['name'] as String?)?.trim().isNotEmpty == true
+                              ? data['name'] as String
+                              : (data['email'] as String? ?? 'Member');
+
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF4F6FB),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const CircleAvatar(
+                              radius: 14,
+                              child: Icon(Icons.person, size: 16),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              displayName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -214,6 +488,7 @@ class HomeScreen extends StatelessWidget {
               children: docs.map((doc) {
                 final data = doc.data() as Map<String, dynamic>;
                 final title = data['title'] as String? ?? 'Untitled Task';
+                final category = data['category'] as String? ?? 'Other';
                 final assignedTo =
                     data['assignedTo'] as String? ?? 'Unknown User';
                 final dueLabel = data['dueLabel'] as String? ?? '';
@@ -223,6 +498,7 @@ class HomeScreen extends StatelessWidget {
                   context: context,
                   docId: doc.id,
                   title: title,
+                  category: category,
                   user: assignedTo,
                   time: dueLabel,
                   completed: completed,
@@ -240,11 +516,31 @@ class HomeScreen extends StatelessWidget {
     required BuildContext context,
     required String docId,
     required String title,
+    required String category,
     required String user,
     required String time,
     required bool completed,
     required String householdId,
   }) {
+    Color categoryColor;
+
+    switch (category) {
+      case 'Cleaning':
+        categoryColor = Colors.blue;
+        break;
+      case 'Groceries':
+        categoryColor = Colors.green;
+        break;
+      case 'Laundry':
+        categoryColor = Colors.orange;
+        break;
+      case 'Bills':
+        categoryColor = Colors.red;
+        break;
+      default:
+        categoryColor = Colors.grey;
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -272,14 +568,46 @@ class HomeScreen extends StatelessWidget {
                   },
           ),
           const SizedBox(width: 8),
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // 🔥 CATEGORY TAG
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: categoryColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        category,
+                        style: TextStyle(
+                          color: categoryColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 4),
                 Text(
                   user,
                   style: TextStyle(color: Colors.grey.shade600),
@@ -287,6 +615,7 @@ class HomeScreen extends StatelessWidget {
               ],
             ),
           ),
+
           Text(
             time,
             style: const TextStyle(
@@ -295,6 +624,7 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
+
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
             onPressed: () async {
@@ -413,60 +743,230 @@ class HomeScreen extends StatelessWidget {
     String householdId,
   ) async {
     final titleController = TextEditingController();
-    final assignedToController = TextEditingController();
-    final dueLabelController = TextEditingController();
+
+    String? selectedCategory;
+    String? selectedAssignee;
+    DateTime? selectedDate;
+    TimeOfDay? selectedTime;
+
+    final categories = ['Cleaning', 'Groceries', 'Laundry', 'Bills', 'Other'];
 
     await showDialog(
       context: context,
       builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Add Task'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: const InputDecoration(labelText: 'Task title'),
-              ),
-              TextField(
-                controller: assignedToController,
-                decoration: const InputDecoration(labelText: 'Assigned to'),
-              ),
-              TextField(
-                controller: dueLabelController,
-                decoration: const InputDecoration(labelText: 'Due label'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final title = titleController.text.trim();
-                final assignedTo = assignedToController.text.trim();
-                final dueLabel = dueLabelController.text.trim();
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> pickDate() async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: DateTime.now(),
+                firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                lastDate: DateTime(2100),
+              );
 
-                if (title.isEmpty || assignedTo.isEmpty || dueLabel.isEmpty) {
-                  return;
-                }
+              if (picked != null) {
+                setDialogState(() {
+                  selectedDate = picked;
+                });
+              }
+            }
 
-                await FirestoreService().addTask(
-                  title: title,
-                  assignedTo: assignedTo,
-                  householdId: householdId,
-                  dueLabel: dueLabel,
-                );
+            Future<void> pickTime() async {
+              final picked = await showTimePicker(
+                context: context,
+                initialTime: TimeOfDay.now(),
+              );
 
-                if (dialogContext.mounted) {
-                  Navigator.of(dialogContext).pop();
-                }
-              },
-              child: const Text('Add'),
-            ),
-          ],
+              if (picked != null) {
+                setDialogState(() {
+                  selectedTime = picked;
+                });
+              }
+            }
+
+            return AlertDialog(
+              title: const Text('Add Task'),
+              content: SizedBox(
+                width: 420,
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: FirestoreService().getHouseholdMembers(householdId),
+                  builder: (context, snapshot) {
+                    final memberDocs = snapshot.data?.docs ?? [];
+
+                    final memberNames = memberDocs.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final name = (data['name'] as String?)?.trim();
+                      final email = (data['email'] as String?)?.trim();
+
+                      if (name != null && name.isNotEmpty) return name;
+                      return email ?? 'Member';
+                    }).toList();
+
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextField(
+                          controller: titleController,
+                          decoration: const InputDecoration(
+                            labelText: 'Task Title',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        DropdownButtonFormField<String>(
+                          value: selectedCategory,
+                          decoration: const InputDecoration(
+                            labelText: 'Category',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: categories.map((category) {
+                            return DropdownMenuItem(
+                              value: category,
+                              child: Text(category),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setDialogState(() {
+                              selectedCategory = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        InkWell(
+                          onTap: pickDate,
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'Due Date',
+                              border: OutlineInputBorder(),
+                            ),
+                            child: Text(
+                              selectedDate == null
+                                  ? 'Select date'
+                                  : '${selectedDate!.month.toString().padLeft(2, '0')}/${selectedDate!.day.toString().padLeft(2, '0')}/${selectedDate!.year}',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        InkWell(
+                          onTap: pickTime,
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'Due Time',
+                              border: OutlineInputBorder(),
+                            ),
+                            child: Text(
+                              selectedTime == null
+                                  ? 'Select time'
+                                  : selectedTime!.format(context),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        DropdownButtonFormField<String>(
+                          value: selectedAssignee,
+                          decoration: const InputDecoration(
+                            labelText: 'Assign To',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: memberNames.map((member) {
+                            return DropdownMenuItem(
+                              value: member,
+                              child: Text(member),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setDialogState(() {
+                              selectedAssignee = value;
+                            });
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final title = titleController.text.trim();
+
+                    if (title.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Task title is required')),
+                      );
+                      return;
+                    }
+
+                    if (selectedCategory == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please select a category')),
+                      );
+                      return;
+                    }
+
+                    if (selectedDate == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please select a due date')),
+                      );
+                      return;
+                    }
+
+                    if (selectedAssignee == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please select an assignee')),
+                      );
+                      return;
+                    }
+
+                    final dueDateTime = selectedTime != null
+                      ? DateTime(
+                          selectedDate!.year,
+                          selectedDate!.month,
+                          selectedDate!.day,
+                          selectedTime!.hour,
+                          selectedTime!.minute,
+                        )
+                      : DateTime(
+                          selectedDate!.year,
+                          selectedDate!.month,
+                          selectedDate!.day,
+                        );
+
+                    final month =
+                        selectedDate!.month.toString().padLeft(2, '0');
+                    final day =
+                        selectedDate!.day.toString().padLeft(2, '0');
+                    final year = selectedDate!.year.toString();
+                    final dueLabel = selectedTime != null
+                      ? '$month/$day/$year • ${selectedTime!.format(context)}'
+                      : '$month/$day/$year';
+
+                    await FirestoreService().addTask(
+                      title: title,
+                      category: selectedCategory!,
+                      assignedTo: selectedAssignee!,
+                      householdId: householdId,
+                      dueLabel: dueLabel,
+                      dueDateTime: dueDateTime,
+                    );
+
+                    if (dialogContext.mounted) {
+                      Navigator.of(dialogContext).pop();
+                    }
+                  },
+                  child: const Text('Add'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
