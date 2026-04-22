@@ -1,30 +1,31 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import 'signup_screen.dart';
+import '../services/firestore_service.dart';
 
-
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class SignUpScreen extends StatefulWidget {
+  const SignUpScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
 
   final AuthService _authService = AuthService();
 
   bool _obscurePassword = true;
-  bool _rememberMe = false;
+  bool _obscureConfirmPassword = true;
   bool _isLoading = false;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -37,20 +38,22 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  String? _validateInputs({required bool requirePassword}) {
+  String? _validateInputs() {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
 
     if (email.isEmpty) return 'Please enter your email.';
     if (!email.contains('@')) return 'Please enter a valid email.';
-    if (requirePassword && password.isEmpty) return 'Please enter your password.';
-    if (!requirePassword) return null;
+    if (password.isEmpty) return 'Please enter your password.';
     if (password.length < 6) return 'Password must be at least 6 characters.';
+    if (confirmPassword.isEmpty) return 'Please confirm your password.';
+    if (password != confirmPassword) return 'Passwords do not match.';
     return null;
   }
 
-  Future<void> _login() async {
-    final error = _validateInputs(requirePassword: true);
+  Future<void> _createAccount() async {
+    final error = _validateInputs();
     if (error != null) {
       _showMessage(error, isError: true);
       return;
@@ -59,36 +62,25 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await _authService.signIn(
-        email: _emailController.text,
-        password: _passwordController.text,
+      final credential = await _authService.signUp(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
       );
+
+      await FirestoreService().createUserDocument(
+        uid: credential.user!.uid,
+        email: credential.user!.email ?? _emailController.text.trim(),
+        householdId: '',
+      );
+
+      if (!mounted) return;
+
+      _showMessage('Account created successfully.');
+      Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
       _showMessage(_firebaseErrorMessage(e), isError: true);
     } catch (_) {
-      _showMessage('Something went wrong while signing in.', isError: true);
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _forgotPassword() async {
-    final email = _emailController.text.trim();
-
-    if (email.isEmpty || !email.contains('@')) {
-      _showMessage('Enter your email first so we can send a reset link.', isError: true);
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      await _authService.sendPasswordReset(email: email);
-      _showMessage('Password reset email sent.');
-    } on FirebaseAuthException catch (e) {
-      _showMessage(_firebaseErrorMessage(e), isError: true);
-    } catch (_) {
-      _showMessage('Something went wrong while sending the reset email.', isError: true);
+      _showMessage('Something went wrong while creating your account.', isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -98,13 +90,6 @@ class _LoginScreenState extends State<LoginScreen> {
     switch (e.code) {
       case 'invalid-email':
         return 'That email address is invalid.';
-      case 'user-disabled':
-        return 'This account has been disabled.';
-      case 'user-not-found':
-        return 'No account found with that email.';
-      case 'wrong-password':
-      case 'invalid-credential':
-        return 'Incorrect email or password.';
       case 'email-already-in-use':
         return 'An account already exists with that email.';
       case 'weak-password':
@@ -149,7 +134,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 _buildBrandHeader(centered: false),
                 const SizedBox(height: 36),
                 const Text(
-                  'Coordinate home life more easily.',
+                  'Create your CircleHome account.',
                   style: TextStyle(
                     fontSize: 40,
                     fontWeight: FontWeight.w800,
@@ -159,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 18),
                 Text(
-                  'CircleHome helps households stay organized with shared tasks, reminders, and updates all in one place.',
+                  'Get started with shared tasks, reminders, and home updates all in one place.',
                   style: TextStyle(
                     fontSize: 18,
                     height: 1.6,
@@ -175,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen> {
             alignment: Alignment.centerRight,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 460),
-              child: _buildLoginCard(),
+              child: _buildSignUpCard(),
             ),
           ),
         ),
@@ -190,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           _buildBrandHeader(centered: true),
           const SizedBox(height: 28),
-          _buildLoginCard(),
+          _buildSignUpCard(),
         ],
       ),
     );
@@ -247,7 +232,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildLoginCard() {
+  Widget _buildSignUpCard() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 32),
@@ -267,7 +252,7 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           const Center(
             child: Text(
-              'Welcome back',
+              'Create account',
               style: TextStyle(
                 fontSize: 30,
                 fontWeight: FontWeight.w800,
@@ -278,10 +263,10 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: 8),
           Center(
             child: Text(
-              'Sign in to continue to CircleHome',
+              'Sign up to get started with CircleHome',
               style: TextStyle(
                 fontSize: 15,
-                color: Colors.grey.shade600,
+                color: Colors.grey,
               ),
             ),
           ),
@@ -328,51 +313,40 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Transform.scale(
-                scale: 0.9,
-                child: Checkbox(
-                  value: _rememberMe,
-                  onChanged: (value) {
-                    setState(() {
-                      _rememberMe = value ?? false;
-                    });
-                  },
-                  side: BorderSide(color: Colors.grey.shade400),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
+          const SizedBox(height: 18),
+          const Text(
+            'Confirm Password',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 10),
+          _buildInputField(
+            controller: _confirmPasswordController,
+            hintText: '••••••••',
+            obscureText: _obscureConfirmPassword,
+            suffixIcon: IconButton(
+              onPressed: () {
+                setState(() {
+                  _obscureConfirmPassword = !_obscureConfirmPassword;
+                });
+              },
+              icon: Icon(
+                _obscureConfirmPassword
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
+                color: Colors.grey.shade500,
               ),
-              Text(
-                'Remember me',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 14,
-                ),
-              ),
-              const Spacer(),
-              InkWell(
-                onTap: _isLoading ? null : _forgotPassword,
-                child: const Text(
-                  'Forgot password?',
-                  style: TextStyle(
-                    color: Color(0xFF3B82F6),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: _isLoading ? null : _login,
+              onPressed: _isLoading ? null : _createAccount,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF3B82F6),
                 foregroundColor: Colors.white,
@@ -391,7 +365,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     )
                   : const Text(
-                      'Login',
+                      'Create account',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -400,32 +374,26 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
           const SizedBox(height: 14),
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: OutlinedButton(
-                onPressed: _isLoading
-                    ? null
-                    : () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SignUpScreen(),
-                          ),
-                        );
-                      },
-                style: OutlinedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                ),
-                child: const Text(
-                  'Create account',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: OutlinedButton(
+              onPressed: _isLoading
+                  ? null
+                  : () {
+                      Navigator.pop(context);
+                    },
+              style: OutlinedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
                 ),
               ),
+              child: const Text(
+                'Back to login',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
             ),
+          ),
         ],
       ),
     );
