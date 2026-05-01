@@ -34,6 +34,10 @@ class FirestoreService {
         .snapshots();
   }
 
+  Stream<DocumentSnapshot<Map<String, dynamic>>> getUserStream(String uid) {
+    return _db.collection('users').doc(uid).snapshots();
+  }
+
   Future<void> addTask({
     required String title,
     required String category,
@@ -41,6 +45,9 @@ class FirestoreService {
     required String householdId,
     required String dueLabel,
     required DateTime dueDateTime,
+    int difficulty = 3,
+    bool isRecurring = false,
+    String recurrenceFrequency = 'none',
   }) async {
     await _db.collection('tasks').add({
       'title': title,
@@ -51,6 +58,9 @@ class FirestoreService {
       'dueDateTime': Timestamp.fromDate(dueDateTime),
       'completed': false,
       'createdAt': FieldValue.serverTimestamp(),
+      'difficulty': difficulty,
+      'isRecurring': isRecurring,
+      'recurrenceFrequency': recurrenceFrequency,
     });
   }
 
@@ -59,21 +69,46 @@ class FirestoreService {
     required String title,
     required String userName,
     required String householdId,
+    String photoUrl = '',
   }) async {
     await _db.collection('tasks').doc(docId).update({
       'completed': true,
+      'completedAt': FieldValue.serverTimestamp(),
     });
 
     await _db.collection('activities').add({
       'text': '$userName completed "$title"',
-      'timeLabel': 'Just now',
       'householdId': householdId,
       'createdAt': FieldValue.serverTimestamp(),
+      'actorName': userName,
+      'actorPhotoUrl': photoUrl,
+    });
+  }
+
+  Future<void> uncompleteTask(String docId) async {
+    await _db.collection('tasks').doc(docId).update({
+      'completed': false,
+      'completedAt': FieldValue.delete(),
     });
   }
 
   Future<void> deleteTask(String docId) async {
     await _db.collection('tasks').doc(docId).delete();
+  }
+
+  Future<void> updateUserProfile(
+    String uid, {
+    String? name,
+    int? workload,
+    String? photoUrl,
+  }) async {
+    final data = <String, dynamic>{};
+    if (name != null) data['name'] = name;
+    if (workload != null) data['workload'] = workload;
+    if (photoUrl != null) data['photoUrl'] = photoUrl;
+    if (data.isNotEmpty) {
+      await _db.collection('users').doc(uid).update(data);
+    }
   }
 
   Future<void> createUserDocument({
@@ -159,4 +194,3 @@ class FirestoreService {
     return doc.data();
   }
 }
-

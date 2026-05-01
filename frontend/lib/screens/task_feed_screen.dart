@@ -3,10 +3,42 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
 
-class TaskFeedScreen extends StatelessWidget {
+class TaskFeedScreen extends StatefulWidget {
   final String householdId;
 
   const TaskFeedScreen({super.key, required this.householdId});
+
+  @override
+  State<TaskFeedScreen> createState() => _TaskFeedScreenState();
+}
+
+class _TaskFeedScreenState extends State<TaskFeedScreen> {
+  bool _showMyTasks = false;
+  String _userName = '';
+  String _photoUrl = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final doc = await FirestoreService().getUserDocument(uid);
+    final data = doc.data();
+    if (data != null && mounted) {
+      final name = data['name'] as String?;
+      final email = FirebaseAuth.instance.currentUser?.email;
+      setState(() {
+        _userName = (name != null && name.isNotEmpty)
+            ? name
+            : (email?.split('@').first ?? 'Member');
+        _photoUrl = data['photoUrl'] as String? ?? '';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,9 +51,9 @@ class TaskFeedScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back, color: Colors.black87),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
-          'All Tasks',
-          style: TextStyle(
+        title: Text(
+          _showMyTasks ? 'My Tasks' : 'All Tasks',
+          style: const TextStyle(
             color: Colors.black87,
             fontWeight: FontWeight.w700,
             fontSize: 20,
@@ -32,108 +64,143 @@ class TaskFeedScreen extends StatelessWidget {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1100),
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirestoreService().getAllTasks(householdId),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                if (snapshot.hasError) {
-                  return const Center(child: Text('Error loading tasks.'));
-                }
-
-                final docs = [...(snapshot.data?.docs ?? [])];
-
-                docs.sort((a, b) {
-                  final aData = a.data() as Map<String, dynamic>;
-                  final bData = b.data() as Map<String, dynamic>;
-                  final aTime = aData['dueDateTime'] as Timestamp?;
-                  final bTime = bData['dueDateTime'] as Timestamp?;
-                  if (aTime == null && bTime == null) return 0;
-                  if (aTime == null) return 1;
-                  if (bTime == null) return -1;
-                  return aTime.compareTo(bTime);
-                });
-
-                if (docs.isEmpty) {
-                  return Center(
-                    child: Container(
-                      margin: const EdgeInsets.all(24),
-                      padding: const EdgeInsets.all(32),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.check_circle_outline,
-                            size: 56,
-                            color: Colors.grey.shade300,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No tasks yet',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade500,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Add a task from the home screen to get started.',
-                            style: TextStyle(color: Colors.grey.shade400),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                final incomplete =
-                    docs.where((d) {
-                      final data = d.data() as Map<String, dynamic>;
-                      return data['completed'] != true;
-                    }).toList();
-                final complete =
-                    docs.where((d) {
-                      final data = d.data() as Map<String, dynamic>;
-                      return data['completed'] == true;
-                    }).toList();
-
-                return ListView(
+            child: Column(
+              children: [
+                Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
-                    vertical: 24,
+                    vertical: 16,
                   ),
-                  children: [
-                    if (incomplete.isNotEmpty) ...[
-                      _sectionHeader(
-                        'Open (${incomplete.length})',
-                        Colors.blue,
+                  child: SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment(
+                        value: false,
+                        label: Text('All Tasks'),
+                        icon: Icon(Icons.list_alt),
                       ),
-                      const SizedBox(height: 10),
-                      ...incomplete.map(
-                        (doc) => _taskCard(context, doc, householdId),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-                    if (complete.isNotEmpty) ...[
-                      _sectionHeader(
-                        'Completed (${complete.length})',
-                        Colors.green,
-                      ),
-                      const SizedBox(height: 10),
-                      ...complete.map(
-                        (doc) => _taskCard(context, doc, householdId),
+                      ButtonSegment(
+                        value: true,
+                        label: Text('My Tasks'),
+                        icon: Icon(Icons.person),
                       ),
                     ],
-                  ],
-                );
-              },
+                    selected: {_showMyTasks},
+                    onSelectionChanged: (selected) {
+                      setState(() => _showMyTasks = selected.first);
+                    },
+                  ),
+                ),
+
+                Expanded(
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: FirestoreService().getAllTasks(widget.householdId),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: CircularProgressIndicator(),
+                        );
+                      }
+
+                      if (snapshot.hasError) {
+                        return const Center(
+                          child: Text('Error loading tasks.'),
+                        );
+                      }
+
+                      var docs = [...(snapshot.data?.docs ?? [])];
+
+                      if (_showMyTasks && _userName.isNotEmpty) {
+                        docs = docs.where((d) {
+                          final data = d.data() as Map<String, dynamic>;
+                          return data['assignedTo'] == _userName;
+                        }).toList();
+                      }
+
+                      docs.sort((a, b) {
+                        final aData = a.data() as Map<String, dynamic>;
+                        final bData = b.data() as Map<String, dynamic>;
+                        final aTime = aData['dueDateTime'] as Timestamp?;
+                        final bTime = bData['dueDateTime'] as Timestamp?;
+                        if (aTime == null && bTime == null) return 0;
+                        if (aTime == null) return 1;
+                        if (bTime == null) return -1;
+                        return aTime.compareTo(bTime);
+                      });
+
+                      if (docs.isEmpty) {
+                        return Center(
+                          child: Container(
+                            margin: const EdgeInsets.all(24),
+                            padding: const EdgeInsets.all(32),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.check_circle_outline,
+                                  size: 56,
+                                  color: Colors.grey.shade300,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  _showMyTasks
+                                      ? 'No tasks assigned to you'
+                                      : 'No tasks yet',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  _showMyTasks
+                                      ? 'Switch to "All Tasks" to see household tasks.'
+                                      : 'Add a task from the home screen to get started.',
+                                  style: TextStyle(color: Colors.grey.shade400),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+
+                      final incomplete = docs.where((d) {
+                        final data = d.data() as Map<String, dynamic>;
+                        return data['completed'] != true;
+                      }).toList();
+                      final complete = docs.where((d) {
+                        final data = d.data() as Map<String, dynamic>;
+                        return data['completed'] == true;
+                      }).toList();
+
+                      return ListView(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 8,
+                        ),
+                        children: [
+                          if (incomplete.isNotEmpty) ...[
+                            _sectionHeader('Open (${incomplete.length})', Colors.blue),
+                            const SizedBox(height: 10),
+                            ...incomplete.map((doc) => _taskCard(context, doc)),
+                            const SizedBox(height: 24),
+                          ],
+                          if (complete.isNotEmpty) ...[
+                            _sectionHeader('Completed (${complete.length})', Colors.green),
+                            const SizedBox(height: 10),
+                            ...complete.map((doc) => _taskCard(context, doc)),
+                          ],
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -165,17 +232,16 @@ class TaskFeedScreen extends StatelessWidget {
     );
   }
 
-  Widget _taskCard(
-    BuildContext context,
-    QueryDocumentSnapshot doc,
-    String householdId,
-  ) {
+  Widget _taskCard(BuildContext context, QueryDocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     final title = data['title'] as String? ?? 'Untitled Task';
     final category = data['category'] as String? ?? 'Other';
     final assignedTo = data['assignedTo'] as String? ?? 'Unknown';
     final dueLabel = data['dueLabel'] as String? ?? '';
     final completed = data['completed'] as bool? ?? false;
+    final difficulty = (data['difficulty'] as int?) ?? 0;
+    final isRecurring = data['isRecurring'] as bool? ?? false;
+    final recurrenceFrequency = data['recurrenceFrequency'] as String? ?? '';
 
     Color categoryColor;
     switch (category) {
@@ -201,9 +267,7 @@ class TaskFeedScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: completed ? const Color(0xFFF8F9FA) : Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: completed
-            ? Border.all(color: Colors.grey.shade200)
-            : null,
+        border: completed ? Border.all(color: Colors.grey.shade200) : null,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -220,10 +284,26 @@ class TaskFeedScreen extends StatelessWidget {
                     await FirestoreService().completeTask(
                       docId: doc.id,
                       title: title,
-                      userName:
-                          FirebaseAuth.instance.currentUser?.email ?? 'Someone',
-                      householdId: householdId,
+                      userName: _userName.isNotEmpty
+                          ? _userName
+                          : (FirebaseAuth.instance.currentUser?.email ?? 'Someone'),
+                      householdId: widget.householdId,
+                      photoUrl: _photoUrl,
                     );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Task completed!'),
+                          duration: const Duration(seconds: 4),
+                          action: SnackBarAction(
+                            label: 'Undo',
+                            onPressed: () async {
+                              await FirestoreService().uncompleteTask(doc.id);
+                            },
+                          ),
+                        ),
+                      );
+                    }
                   },
           ),
           const SizedBox(width: 8),
@@ -239,9 +319,7 @@ class TaskFeedScreen extends StatelessWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 15,
-                          color: completed
-                              ? Colors.grey.shade400
-                              : Colors.black87,
+                          color: completed ? Colors.grey.shade400 : Colors.black87,
                           decoration: completed
                               ? TextDecoration.lineThrough
                               : TextDecoration.none,
@@ -249,7 +327,7 @@ class TaskFeedScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -264,25 +342,38 @@ class TaskFeedScreen extends StatelessWidget {
                       child: Text(
                         category,
                         style: TextStyle(
-                          color: completed
-                              ? Colors.grey.shade400
-                              : categoryColor,
+                          color: completed ? Colors.grey.shade400 : categoryColor,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
+                    if (difficulty > 0) ...[
+                      const SizedBox(width: 4),
+                      _difficultyBadge(difficulty, dimmed: completed),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  assignedTo,
-                  style: TextStyle(
-                    color: completed
-                        ? Colors.grey.shade400
-                        : Colors.grey.shade600,
-                    fontSize: 13,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      assignedTo,
+                      style: TextStyle(
+                        color: completed
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    if (isRecurring &&
+                        recurrenceFrequency.isNotEmpty &&
+                        recurrenceFrequency != 'none' &&
+                        !completed) ...[
+                      const SizedBox(width: 6),
+                      _recurringBadge(recurrenceFrequency),
+                    ],
+                  ],
                 ),
               ],
             ),
@@ -327,6 +418,57 @@ class TaskFeedScreen extends StatelessWidget {
             onPressed: () async {
               await FirestoreService().deleteTask(doc.id);
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _difficultyBadge(int difficulty, {bool dimmed = false}) {
+    const colors = [
+      Colors.green,
+      Color(0xFF8BC34A),
+      Colors.orange,
+      Colors.deepOrange,
+      Colors.red,
+    ];
+    final color = dimmed ? Colors.grey : colors[(difficulty - 1).clamp(0, 4)];
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        '★$difficulty',
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _recurringBadge(String frequency) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.purple.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.repeat, size: 11, color: Colors.purple),
+          const SizedBox(width: 3),
+          Text(
+            frequency,
+            style: const TextStyle(
+              color: Colors.purple,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),

@@ -6,10 +6,40 @@ import '../services/firestore_service.dart';
 import 'create_household_screen.dart';
 import 'join_household_screen.dart';
 import 'task_feed_screen.dart';
+import 'profile_screen.dart';
 import 'package:flutter/services.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  void _navigateToAllTasks(BuildContext context, String householdId) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TaskFeedScreen(householdId: householdId),
+      ),
+    );
+  }
+
+  void _navigateToProfile(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+    );
+  }
+
+  String _formatRelativeTime(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inSeconds < 60) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,124 +53,71 @@ class HomeScreen extends StatelessWidget {
       );
     }
 
-    return FutureBuilder<String?>(
-      future: FirestoreService().getHouseholdIdForUser(currentUser.uid),
-      builder: (context, householdSnapshot) {
-        if (householdSnapshot.connectionState == ConnectionState.waiting) {
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirestoreService().getUserStream(currentUser.uid),
+      builder: (context, userSnapshot) {
+        if (userSnapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        final householdId = householdSnapshot.data;
+        final userData = userSnapshot.data?.data();
+        final householdId = userData?['householdId'] as String?;
+        final userName = userData?['name'] as String? ??
+            currentUser.email?.split('@').first ??
+            'Member';
+        final photoUrl = userData?['photoUrl'] as String? ?? '';
 
         if (householdId == null || householdId.isEmpty) {
-          return Scaffold(
-            backgroundColor: const Color(0xFFF4F6FB),
-            body: Center(
-              child: Container(
-                width: 520,
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Welcome to CircleHome',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'You are not currently in a household. Create one or join one using an invite code.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.grey.shade700,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              final created = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const CreateHouseholdScreen(),
-                                ),
-                              );
-
-                              if (created == true && context.mounted) {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const HomeScreen(),
-                                  ),
-                                );
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              padding: const EdgeInsets.symmetric(vertical: 18),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            child: const Text('Create Household'),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              final joined = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const JoinHouseholdScreen(),
-                                ),
-                              );
-
-                              if (joined == true && context.mounted) {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const HomeScreen(),
-                                  ),
-                                );
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              padding: const EdgeInsets.symmetric(vertical: 18),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            child: const Text('Join Household'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
+          return _buildNoHouseholdScreen(context);
         }
 
         return Scaffold(
           backgroundColor: const Color(0xFFF4F6FB),
+          bottomNavigationBar: isWide
+              ? null
+              : NavigationBar(
+                  selectedIndex: 0,
+                  onDestinationSelected: (index) {
+                    if (index == 1) _navigateToAllTasks(context, householdId);
+                    if (index == 2) _navigateToProfile(context);
+                    if (index == 3) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Settings coming soon'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  },
+                  destinations: const [
+                    NavigationDestination(
+                      icon: Icon(Icons.home_outlined),
+                      selectedIcon: Icon(Icons.home),
+                      label: 'Home',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.checklist_outlined),
+                      selectedIcon: Icon(Icons.checklist),
+                      label: 'All Tasks',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.person_outline),
+                      selectedIcon: Icon(Icons.person),
+                      label: 'Profile',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.settings_outlined),
+                      selectedIcon: Icon(Icons.settings),
+                      label: 'Settings',
+                    ),
+                  ],
+                ),
           body: SafeArea(
             child: Row(
               children: [
-                if (isWide) _buildSidebar(),
+                if (isWide) _buildSidebar(context, householdId),
                 Expanded(
                   child: Center(
                     child: SingleChildScrollView(
@@ -153,13 +130,13 @@ class HomeScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildHeader(),
+                            _buildHeader(context),
                             const SizedBox(height: 16),
                             _buildHouseholdCard(context, householdId),
                             const SizedBox(height: 24),
-                            _buildSummaryCards(householdId),
+                            _buildSummaryCards(householdId, userName),
                             const SizedBox(height: 28),
-                            _buildTasksSection(householdId),
+                            _buildTasksSection(context, householdId, userName, photoUrl),
                             const SizedBox(height: 28),
                             _buildActivitySection(householdId),
                             const SizedBox(height: 28),
@@ -178,7 +155,100 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildNoHouseholdScreen(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F6FB),
+      body: Center(
+        child: Container(
+          width: 520,
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Welcome to CircleHome',
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'You are not currently in a household. Create one or join one using an invite code.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey.shade700, fontSize: 16),
+              ),
+              const SizedBox(height: 28),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final created = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const CreateHouseholdScreen(),
+                          ),
+                        );
+                        if (created == true && context.mounted) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const HomeScreen(),
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text('Create Household'),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final joined = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const JoinHouseholdScreen(),
+                          ),
+                        );
+                        if (joined == true && context.mounted) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const HomeScreen(),
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text('Join Household'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
 
     return Row(
@@ -214,9 +284,7 @@ class HomeScreen extends StatelessWidget {
     return FutureBuilder<Map<String, dynamic>?>(
       future: FirestoreService().getHousehold(householdId),
       builder: (context, householdSnapshot) {
-        if (!householdSnapshot.hasData) {
-          return const SizedBox();
-        }
+        if (!householdSnapshot.hasData) return const SizedBox();
 
         final householdData = householdSnapshot.data!;
         final name = householdData['name'] ?? 'Household';
@@ -257,7 +325,6 @@ class HomeScreen extends StatelessWidget {
                               builder: (_) => const CreateHouseholdScreen(),
                             ),
                           );
-
                           if (created == true && context.mounted) {
                             Navigator.pushReplacement(
                               context,
@@ -281,7 +348,6 @@ class HomeScreen extends StatelessWidget {
                               builder: (_) => const JoinHouseholdScreen(),
                             ),
                           );
-
                           if (joined == true && context.mounted) {
                             Navigator.pushReplacement(
                               context,
@@ -299,7 +365,6 @@ class HomeScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 10),
-
                   Row(
                     children: [
                       Text(
@@ -325,7 +390,6 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 6),
                   Text(
                     '$memberCount member${memberCount == 1 ? '' : 's'} in household',
@@ -334,9 +398,7 @@ class HomeScreen extends StatelessWidget {
                       fontSize: 15,
                     ),
                   ),
-
                   const SizedBox(height: 14),
-
                   Wrap(
                     spacing: 10,
                     runSpacing: 10,
@@ -384,43 +446,46 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryCards(String householdId) {
+  Widget _buildSummaryCards(String householdId, String userName) {
     final service = FirestoreService();
 
     return StreamBuilder<QuerySnapshot>(
       stream: service.getTasks(householdId),
       builder: (context, taskSnapshot) {
-        final tasks = taskSnapshot.data?.docs ?? [];
-        final incompleteCount = tasks.length;
+        final allDocs = taskSnapshot.data?.docs ?? [];
+        final allOpenCount = allDocs.length;
+        final myOpenCount = allDocs.where((d) {
+          final data = d.data() as Map<String, dynamic>;
+          return data['assignedTo'] == userName;
+        }).length;
 
         return StreamBuilder<QuerySnapshot>(
           stream: service.getActivities(householdId),
           builder: (context, activitySnapshot) {
-            final activities = activitySnapshot.data?.docs ?? [];
-            final activityCount = activities.length;
+            final activityCount = activitySnapshot.data?.docs.length ?? 0;
 
             return Row(
               children: [
                 Expanded(
                   child: _SummaryCard(
-                    incompleteCount.toString(),
-                    "Tasks Today",
+                    myOpenCount.toString(),
+                    "My Tasks",
+                    Colors.blue,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: _SummaryCard(
+                    allOpenCount.toString(),
+                    "Open Tasks",
                     Colors.orange,
                   ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: _SummaryCard(
-                    incompleteCount.toString(),
-                    "Open Tasks",
-                    Colors.red,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: _SummaryCard(
                     activityCount.toString(),
-                    "Recent Activity",
+                    "Activity",
                     Colors.green,
                   ),
                 ),
@@ -432,34 +497,31 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTasksSection(String householdId) {
+  Widget _buildTasksSection(
+    BuildContext context,
+    String householdId,
+    String userName,
+    String photoUrl,
+  ) {
     final service = FirestoreService();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Builder(
-          builder: (context) => Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  "My Tasks",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                "My Tasks",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              TextButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        TaskFeedScreen(householdId: householdId),
-                  ),
-                ),
-                icon: const Icon(Icons.list_alt, size: 16),
-                label: const Text('View All'),
-              ),
-            ],
-          ),
+            ),
+            TextButton.icon(
+              onPressed: () => _navigateToAllTasks(context, householdId),
+              icon: const Icon(Icons.list_alt, size: 16),
+              label: const Text('All Tasks'),
+            ),
+          ],
         ),
         const SizedBox(height: 14),
         StreamBuilder<QuerySnapshot>(
@@ -476,53 +538,71 @@ class HomeScreen extends StatelessWidget {
               return const Text("Error loading tasks.");
             }
 
-            final docs = [...(snapshot.data?.docs ?? [])];
+            final allDocs = snapshot.data?.docs ?? [];
+            final myDocs = allDocs.where((d) {
+              final data = d.data() as Map<String, dynamic>;
+              return data['assignedTo'] == userName;
+            }).toList();
 
-            docs.sort((a, b) {
+            myDocs.sort((a, b) {
               final aData = a.data() as Map<String, dynamic>;
               final bData = b.data() as Map<String, dynamic>;
-
-              final aTime = aData['createdAt'] as Timestamp?;
-              final bTime = bData['createdAt'] as Timestamp?;
-
+              final aTime = aData['dueDateTime'] as Timestamp?;
+              final bTime = bData['dueDateTime'] as Timestamp?;
               if (aTime == null && bTime == null) return 0;
               if (aTime == null) return 1;
               if (bTime == null) return -1;
-
-              return bTime.compareTo(aTime);
+              return aTime.compareTo(bTime);
             });
 
-            if (docs.isEmpty) {
+            if (myDocs.isEmpty) {
               return Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(18),
                 ),
-                child: const Text("No tasks yet."),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 48,
+                      color: Colors.grey.shade300,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No tasks assigned to you',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Tap "All Tasks" to see household tasks.',
+                      style: TextStyle(
+                        color: Colors.grey.shade400,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
               );
             }
 
             return Column(
-              children: docs.map((doc) {
+              children: myDocs.map((doc) {
                 final data = doc.data() as Map<String, dynamic>;
-                final title = data['title'] as String? ?? 'Untitled Task';
-                final category = data['category'] as String? ?? 'Other';
-                final assignedTo =
-                    data['assignedTo'] as String? ?? 'Unknown User';
-                final dueLabel = data['dueLabel'] as String? ?? '';
-                final completed = data['completed'] as bool? ?? false;
-
                 return _taskTile(
                   context: context,
                   docId: doc.id,
-                  title: title,
-                  category: category,
-                  user: assignedTo,
-                  time: dueLabel,
-                  completed: completed,
+                  data: data,
                   householdId: householdId,
+                  userName: userName,
+                  photoUrl: photoUrl,
                 );
               }).toList(),
             );
@@ -535,15 +615,21 @@ class HomeScreen extends StatelessWidget {
   Widget _taskTile({
     required BuildContext context,
     required String docId,
-    required String title,
-    required String category,
-    required String user,
-    required String time,
-    required bool completed,
+    required Map<String, dynamic> data,
     required String householdId,
+    required String userName,
+    String photoUrl = '',
   }) {
-    Color categoryColor;
+    final title = data['title'] as String? ?? 'Untitled Task';
+    final category = data['category'] as String? ?? 'Other';
+    final assignedTo = data['assignedTo'] as String? ?? 'Unknown User';
+    final dueLabel = data['dueLabel'] as String? ?? '';
+    final completed = data['completed'] as bool? ?? false;
+    final difficulty = (data['difficulty'] as int?) ?? 0;
+    final isRecurring = data['isRecurring'] as bool? ?? false;
+    final recurrenceFrequency = data['recurrenceFrequency'] as String? ?? '';
 
+    Color categoryColor;
     switch (category) {
       case 'Cleaning':
         categoryColor = Colors.blue;
@@ -581,14 +667,27 @@ class HomeScreen extends StatelessWidget {
                     await FirestoreService().completeTask(
                       docId: docId,
                       title: title,
-                      userName:
-                          FirebaseAuth.instance.currentUser?.email ?? 'Someone',
+                      userName: userName,
                       householdId: householdId,
+                      photoUrl: photoUrl,
                     );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Task completed!'),
+                          duration: const Duration(seconds: 4),
+                          action: SnackBarAction(
+                            label: 'Undo',
+                            onPressed: () async {
+                              await FirestoreService().uncompleteTask(docId);
+                            },
+                          ),
+                        ),
+                      );
+                    }
                   },
           ),
           const SizedBox(width: 8),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -604,9 +703,7 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-
-                    // 🔥 CATEGORY TAG
+                    const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -625,26 +722,38 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (difficulty > 0) ...[
+                      const SizedBox(width: 4),
+                      _difficultyBadge(difficulty),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  user,
-                  style: TextStyle(color: Colors.grey.shade600),
+                Row(
+                  children: [
+                    Text(
+                      assignedTo,
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                    if (isRecurring &&
+                        recurrenceFrequency.isNotEmpty &&
+                        recurrenceFrequency != 'none') ...[
+                      const SizedBox(width: 8),
+                      _recurringBadge(recurrenceFrequency),
+                    ],
+                  ],
                 ),
               ],
             ),
           ),
-
           Text(
-            time,
+            dueLabel,
             style: const TextStyle(
               color: Colors.orange,
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(width: 8),
-
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
             onPressed: () async {
@@ -686,14 +795,11 @@ class HomeScreen extends StatelessWidget {
             docs.sort((a, b) {
               final aData = a.data() as Map<String, dynamic>;
               final bData = b.data() as Map<String, dynamic>;
-
               final aTime = aData['createdAt'] as Timestamp?;
               final bTime = bData['createdAt'] as Timestamp?;
-
               if (aTime == null && bTime == null) return 0;
               if (aTime == null) return 1;
               if (bTime == null) return -1;
-
               return bTime.compareTo(aTime);
             });
 
@@ -713,9 +819,12 @@ class HomeScreen extends StatelessWidget {
               children: docs.map((doc) {
                 final data = doc.data() as Map<String, dynamic>;
                 final text = data['text'] as String? ?? 'Activity';
-                final timeLabel = data['timeLabel'] as String? ?? '';
-
-                return _ActivityTile(text, timeLabel);
+                final createdAt = data['createdAt'] as Timestamp?;
+                final timeLabel = createdAt != null
+                    ? _formatRelativeTime(createdAt.toDate())
+                    : (data['timeLabel'] as String? ?? '');
+                final actorPhotoUrl = data['actorPhotoUrl'] as String? ?? '';
+                return _ActivityTile(text, timeLabel, actorPhotoUrl);
               }).toList(),
             );
           },
@@ -763,13 +872,44 @@ class HomeScreen extends StatelessWidget {
     String householdId,
   ) async {
     final titleController = TextEditingController();
-
     String? selectedCategory;
     String? selectedAssignee;
     DateTime? selectedDate;
     TimeOfDay? selectedTime;
+    int selectedDifficulty = 3;
+    bool isRecurring = false;
+    String recurrenceFrequency = 'Weekly';
 
     final categories = ['Cleaning', 'Groceries', 'Laundry', 'Bills', 'Other'];
+    final frequencies = ['Daily', 'Weekly', 'Monthly'];
+
+    Color difficultyColor(int d) {
+      const colors = [
+        Colors.green,
+        Color(0xFF8BC34A),
+        Colors.orange,
+        Colors.deepOrange,
+        Colors.red,
+      ];
+      return colors[(d - 1).clamp(0, 4)];
+    }
+
+    String difficultyLabel(int d) {
+      switch (d) {
+        case 1:
+          return 'Very Easy';
+        case 2:
+          return 'Easy';
+        case 3:
+          return 'Moderate';
+        case 4:
+          return 'Hard';
+        case 5:
+          return 'Very Hard';
+        default:
+          return '';
+      }
+    }
 
     await showDialog(
       context: context,
@@ -783,11 +923,8 @@ class HomeScreen extends StatelessWidget {
                 firstDate: DateTime.now().subtract(const Duration(days: 1)),
                 lastDate: DateTime(2100),
               );
-
               if (picked != null) {
-                setDialogState(() {
-                  selectedDate = picked;
-                });
+                setDialogState(() => selectedDate = picked);
               }
             }
 
@@ -796,11 +933,8 @@ class HomeScreen extends StatelessWidget {
                 context: context,
                 initialTime: TimeOfDay.now(),
               );
-
               if (picked != null) {
-                setDialogState(() {
-                  selectedTime = picked;
-                });
+                setDialogState(() => selectedTime = picked);
               }
             }
 
@@ -812,99 +946,184 @@ class HomeScreen extends StatelessWidget {
                   stream: FirestoreService().getHouseholdMembers(householdId),
                   builder: (context, snapshot) {
                     final memberDocs = snapshot.data?.docs ?? [];
-
                     final memberNames = memberDocs.map((doc) {
                       final data = doc.data() as Map<String, dynamic>;
                       final name = (data['name'] as String?)?.trim();
                       final email = (data['email'] as String?)?.trim();
-
                       if (name != null && name.isNotEmpty) return name;
                       return email ?? 'Member';
                     }).toList();
 
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TextField(
-                          controller: titleController,
-                          decoration: const InputDecoration(
-                            labelText: 'Task Title',
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        DropdownButtonFormField<String>(
-                          value: selectedCategory,
-                          decoration: const InputDecoration(
-                            labelText: 'Category',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: categories.map((category) {
-                            return DropdownMenuItem(
-                              value: category,
-                              child: Text(category),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setDialogState(() {
-                              selectedCategory = value;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 16),
-
-                        InkWell(
-                          onTap: pickDate,
-                          child: InputDecorator(
+                    return SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          TextField(
+                            controller: titleController,
                             decoration: const InputDecoration(
-                              labelText: 'Due Date',
+                              labelText: 'Task Title',
                               border: OutlineInputBorder(),
                             ),
-                            child: Text(
-                              selectedDate == null
-                                  ? 'Select date'
-                                  : '${selectedDate!.month.toString().padLeft(2, '0')}/${selectedDate!.day.toString().padLeft(2, '0')}/${selectedDate!.year}',
-                            ),
                           ),
-                        ),
-                        const SizedBox(height: 10),
+                          const SizedBox(height: 16),
 
-                        InkWell(
-                          onTap: pickTime,
-                          child: InputDecorator(
+                          DropdownButtonFormField<String>(
+                            value: selectedCategory,
                             decoration: const InputDecoration(
-                              labelText: 'Due Time',
+                              labelText: 'Category',
                               border: OutlineInputBorder(),
                             ),
-                            child: Text(
-                              selectedTime == null
-                                  ? 'Select time'
-                                  : selectedTime!.format(context),
+                            items: categories
+                                .map((c) => DropdownMenuItem(
+                                      value: c,
+                                      child: Text(c),
+                                    ))
+                                .toList(),
+                            onChanged: (v) =>
+                                setDialogState(() => selectedCategory = v),
+                          ),
+                          const SizedBox(height: 16),
+
+                          InkWell(
+                            onTap: pickDate,
+                            child: InputDecorator(
+                              decoration: const InputDecoration(
+                                labelText: 'Due Date',
+                                border: OutlineInputBorder(),
+                              ),
+                              child: Text(
+                                selectedDate == null
+                                    ? 'Select date'
+                                    : '${selectedDate!.month.toString().padLeft(2, '0')}/${selectedDate!.day.toString().padLeft(2, '0')}/${selectedDate!.year}',
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
+                          const SizedBox(height: 10),
 
-                        DropdownButtonFormField<String>(
-                          value: selectedAssignee,
-                          decoration: const InputDecoration(
-                            labelText: 'Assign To',
-                            border: OutlineInputBorder(),
+                          InkWell(
+                            onTap: pickTime,
+                            child: InputDecorator(
+                              decoration: const InputDecoration(
+                                labelText: 'Due Time',
+                                border: OutlineInputBorder(),
+                              ),
+                              child: Text(
+                                selectedTime == null
+                                    ? 'Select time'
+                                    : selectedTime!.format(context),
+                              ),
+                            ),
                           ),
-                          items: memberNames.map((member) {
-                            return DropdownMenuItem(
-                              value: member,
-                              child: Text(member),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setDialogState(() {
-                              selectedAssignee = value;
-                            });
-                          },
-                        ),
-                      ],
+                          const SizedBox(height: 16),
+
+                          DropdownButtonFormField<String>(
+                            value: selectedAssignee,
+                            decoration: const InputDecoration(
+                              labelText: 'Assign To',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: memberNames
+                                .map((m) => DropdownMenuItem(
+                                      value: m,
+                                      child: Text(m),
+                                    ))
+                                .toList(),
+                            onChanged: (v) =>
+                                setDialogState(() => selectedAssignee = v),
+                          ),
+                          const SizedBox(height: 20),
+
+                          Text(
+                            'Difficulty',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: List.generate(5, (i) {
+                              final d = i + 1;
+                              final isSelected = selectedDifficulty == d;
+                              final color = difficultyColor(d);
+                              return GestureDetector(
+                                onTap: () => setDialogState(
+                                    () => selectedDifficulty = d),
+                                child: Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? color
+                                        : color.withOpacity(0.12),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '$d',
+                                      style: TextStyle(
+                                        color: isSelected
+                                            ? Colors.white
+                                            : color,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                          const SizedBox(height: 4),
+                          Center(
+                            child: Text(
+                              difficultyLabel(selectedDifficulty),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          Row(
+                            children: [
+                              const Expanded(
+                                child: Text(
+                                  'Recurring Task',
+                                  style: TextStyle(fontSize: 15),
+                                ),
+                              ),
+                              Switch(
+                                value: isRecurring,
+                                onChanged: (v) =>
+                                    setDialogState(() => isRecurring = v),
+                              ),
+                            ],
+                          ),
+
+                          if (isRecurring) ...[
+                            const SizedBox(height: 8),
+                            DropdownButtonFormField<String>(
+                              value: recurrenceFrequency,
+                              decoration: const InputDecoration(
+                                labelText: 'Repeat',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: frequencies
+                                  .map((f) => DropdownMenuItem(
+                                        value: f,
+                                        child: Text(f),
+                                      ))
+                                  .toList(),
+                              onChanged: (v) => setDialogState(
+                                  () => recurrenceFrequency = v ?? 'Weekly'),
+                            ),
+                          ],
+                        ],
+                      ),
                     );
                   },
                 ),
@@ -924,50 +1143,49 @@ class HomeScreen extends StatelessWidget {
                       );
                       return;
                     }
-
                     if (selectedCategory == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please select a category')),
+                        const SnackBar(
+                            content: Text('Please select a category')),
                       );
                       return;
                     }
-
                     if (selectedDate == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please select a due date')),
+                        const SnackBar(
+                            content: Text('Please select a due date')),
                       );
                       return;
                     }
-
                     if (selectedAssignee == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please select an assignee')),
+                        const SnackBar(
+                            content: Text('Please select an assignee')),
                       );
                       return;
                     }
 
                     final dueDateTime = selectedTime != null
-                      ? DateTime(
-                          selectedDate!.year,
-                          selectedDate!.month,
-                          selectedDate!.day,
-                          selectedTime!.hour,
-                          selectedTime!.minute,
-                        )
-                      : DateTime(
-                          selectedDate!.year,
-                          selectedDate!.month,
-                          selectedDate!.day,
-                        );
+                        ? DateTime(
+                            selectedDate!.year,
+                            selectedDate!.month,
+                            selectedDate!.day,
+                            selectedTime!.hour,
+                            selectedTime!.minute,
+                          )
+                        : DateTime(
+                            selectedDate!.year,
+                            selectedDate!.month,
+                            selectedDate!.day,
+                          );
 
                     final month =
                         selectedDate!.month.toString().padLeft(2, '0');
-                    final day =
-                        selectedDate!.day.toString().padLeft(2, '0');
+                    final day = selectedDate!.day.toString().padLeft(2, '0');
                     final year = selectedDate!.year.toString();
                     final dueLabel = selectedTime != null
-                      ? '$month/$day/$year • ${selectedTime!.format(context)}'
-                      : '$month/$day/$year';
+                        ? '$month/$day/$year • ${selectedTime!.format(context)}'
+                        : '$month/$day/$year';
 
                     await FirestoreService().addTask(
                       title: title,
@@ -976,10 +1194,19 @@ class HomeScreen extends StatelessWidget {
                       householdId: householdId,
                       dueLabel: dueLabel,
                       dueDateTime: dueDateTime,
+                      difficulty: selectedDifficulty,
+                      isRecurring: isRecurring,
+                      recurrenceFrequency:
+                          isRecurring ? recurrenceFrequency : 'none',
                     );
 
                     if (dialogContext.mounted) {
                       Navigator.of(dialogContext).pop();
+                    }
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Task added!')),
+                      );
                     }
                   },
                   child: const Text('Add'),
@@ -992,47 +1219,105 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSidebar() {
-    return Builder(
-      builder: (context) {
-        final householdFuture = FirestoreService().getHouseholdIdForUser(
-          FirebaseAuth.instance.currentUser!.uid,
-        );
+  Widget _difficultyBadge(int difficulty) {
+    const colors = [
+      Colors.green,
+      Color(0xFF8BC34A),
+      Colors.orange,
+      Colors.deepOrange,
+      Colors.red,
+    ];
+    final color = colors[(difficulty - 1).clamp(0, 4)];
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        '★$difficulty',
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
 
-        return Container(
-          width: 90,
-          color: Colors.white,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.home, size: 30),
-              const SizedBox(height: 30),
-              FutureBuilder<String?>(
-                future: householdFuture,
-                builder: (context, snap) => IconButton(
-                  icon: const Icon(Icons.check_box),
-                  tooltip: 'All Tasks',
-                  onPressed: snap.data != null && snap.data!.isNotEmpty
-                      ? () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  TaskFeedScreen(householdId: snap.data!),
-                            ),
-                          )
-                      : null,
-                ),
-              ),
-              const SizedBox(height: 30),
-              const Icon(Icons.favorite),
-              const SizedBox(height: 30),
-              const Icon(Icons.people),
-              const SizedBox(height: 30),
-              const Icon(Icons.settings),
-            ],
+  Widget _recurringBadge(String frequency) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.purple.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.repeat, size: 11, color: Colors.purple),
+          const SizedBox(width: 3),
+          Text(
+            frequency,
+            style: const TextStyle(
+              color: Colors.purple,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        );
-      },
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebar(BuildContext context, String householdId) {
+    return Container(
+      width: 90,
+      color: Colors.white,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.home, size: 30, color: Colors.blue),
+          const SizedBox(height: 30),
+          IconButton(
+            icon: const Icon(Icons.checklist),
+            tooltip: 'All Tasks',
+            onPressed: () => _navigateToAllTasks(context, householdId),
+          ),
+          const SizedBox(height: 30),
+          IconButton(
+            icon: const Icon(Icons.emoji_events_outlined),
+            tooltip: 'Leaderboard',
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Leaderboard coming soon'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 30),
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            tooltip: 'Profile',
+            onPressed: () => _navigateToProfile(context),
+          ),
+          const SizedBox(height: 30),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings',
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Settings coming soon'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1073,8 +1358,9 @@ class _SummaryCard extends StatelessWidget {
 class _ActivityTile extends StatelessWidget {
   final String text;
   final String time;
+  final String photoUrl;
 
-  const _ActivityTile(this.text, this.time);
+  const _ActivityTile(this.text, this.time, this.photoUrl);
 
   @override
   Widget build(BuildContext context) {
@@ -1085,7 +1371,11 @@ class _ActivityTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
       ),
       child: ListTile(
-        leading: const CircleAvatar(child: Icon(Icons.person)),
+        leading: CircleAvatar(
+          backgroundImage:
+              photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
+          child: photoUrl.isEmpty ? const Icon(Icons.person) : null,
+        ),
         title: Text(text),
         trailing: Text(time),
       ),
