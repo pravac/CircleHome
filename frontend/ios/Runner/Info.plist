@@ -41,6 +41,12 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>CircleHome needs camera access to set your profile photo.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>CircleHome needs photo library access to set your profile photo.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>CircleHome needs photo library access to save your profile photo.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

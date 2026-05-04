@@ -278,33 +278,44 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
               color: completed ? Colors.green : Colors.grey.shade400,
               size: 26,
             ),
-            onPressed: completed
-                ? null
-                : () async {
-                    await FirestoreService().completeTask(
-                      docId: doc.id,
-                      title: title,
-                      userName: _userName.isNotEmpty
-                          ? _userName
-                          : (FirebaseAuth.instance.currentUser?.email ?? 'Someone'),
-                      householdId: widget.householdId,
-                      photoUrl: _photoUrl,
-                    );
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Task completed!'),
-                          duration: const Duration(seconds: 4),
-                          action: SnackBarAction(
-                            label: 'Undo',
-                            onPressed: () async {
-                              await FirestoreService().uncompleteTask(doc.id);
-                            },
-                          ),
-                        ),
-                      );
-                    }
-                  },
+            tooltip: completed ? 'Mark as incomplete' : null,
+            onPressed: () async {
+              if (completed) {
+                await FirestoreService().uncompleteTask(doc.id);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Task marked incomplete.'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              } else {
+                await FirestoreService().completeTask(
+                  docId: doc.id,
+                  title: title,
+                  userName: _userName.isNotEmpty
+                      ? _userName
+                      : (FirebaseAuth.instance.currentUser?.email ?? 'Someone'),
+                  householdId: widget.householdId,
+                  photoUrl: _photoUrl,
+                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Task completed!'),
+                      duration: const Duration(seconds: 4),
+                      action: SnackBarAction(
+                        label: 'Undo',
+                        onPressed: () async {
+                          await FirestoreService().uncompleteTask(doc.id);
+                        },
+                      ),
+                    ),
+                  );
+                }
+              }
+            },
           ),
           const SizedBox(width: 8),
           Expanded(

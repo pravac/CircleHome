@@ -193,4 +193,23 @@ class FirestoreService {
     final doc = await _db.collection('households').doc(householdId).get();
     return doc.data();
   }
+
+  Stream<DocumentSnapshot<Map<String, dynamic>>> getHouseholdStream(
+    String householdId,
+  ) {
+    return _db.collection('households').doc(householdId).snapshots();
+  }
+
+  Future<void> updateHousehold(
+    String householdId, {
+    String? name,
+    String? photoUrl,
+  }) async {
+    final data = <String, dynamic>{};
+    if (name != null) data['name'] = name;
+    if (photoUrl != null) data['photoUrl'] = photoUrl;
+    if (data.isNotEmpty) {
+      await _db.collection('households').doc(householdId).update(data);
+    }
+  }
 }

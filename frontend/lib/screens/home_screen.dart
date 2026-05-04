@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import 'create_household_screen.dart';
@@ -281,14 +284,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHouseholdCard(BuildContext context, String householdId) {
-    return FutureBuilder<Map<String, dynamic>?>(
-      future: FirestoreService().getHousehold(householdId),
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirestoreService().getHouseholdStream(householdId),
       builder: (context, householdSnapshot) {
         if (!householdSnapshot.hasData) return const SizedBox();
 
-        final householdData = householdSnapshot.data!;
-        final name = householdData['name'] ?? 'Household';
-        final code = householdData['code'] ?? '';
+        final householdData = householdSnapshot.data!.data() ?? {};
+        final name = householdData['name'] as String? ?? 'Household';
+        final code = householdData['code'] as String? ?? '';
+        final householdPhotoUrl = householdData['photoUrl'] as String? ?? '';
 
         return StreamBuilder<QuerySnapshot>(
           stream: FirestoreService().getHouseholdMembers(householdId),
@@ -308,6 +312,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Row(
                     children: [
+                      if (householdPhotoUrl.isNotEmpty) ...[
+                        CircleAvatar(
+                          radius: 22,
+                          backgroundImage: NetworkImage(householdPhotoUrl),
+                        ),
+                        const SizedBox(width: 12),
+                      ] else ...[
+                        CircleAvatar(
+                          radius: 22,
+                          backgroundColor:
+                              const Color(0xFF5B8DEF).withOpacity(0.15),
+                          child: const Icon(
+                            Icons.home_outlined,
+                            color: Color(0xFF5B8DEF),
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
                       Expanded(
                         child: Text(
                           name,
@@ -315,6 +338,16 @@ class _HomeScreenState extends State<HomeScreen> {
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, size: 20),
+                        tooltip: 'Edit household',
+                        onPressed: () => _showEditHouseholdDialog(
+                          context,
+                          householdId,
+                          name,
+                          householdPhotoUrl,
                         ),
                       ),
                       ElevatedButton(
@@ -408,6 +441,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           (data['name'] as String?)?.trim().isNotEmpty == true
                               ? data['name'] as String
                               : (data['email'] as String? ?? 'Member');
+                      final memberPhoto = data['photoUrl'] as String? ?? '';
 
                       return Container(
                         padding: const EdgeInsets.symmetric(
@@ -421,9 +455,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const CircleAvatar(
+                            CircleAvatar(
                               radius: 14,
-                              child: Icon(Icons.person, size: 16),
+                              backgroundImage: memberPhoto.isNotEmpty
+                                  ? NetworkImage(memberPhoto)
+                                  : null,
+                              child: memberPhoto.isEmpty
+                                  ? const Icon(Icons.person, size: 16)
+                                  : null,
                             ),
                             const SizedBox(width: 8),
                             Text(
@@ -439,6 +478,159 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showEditHouseholdDialog(
+    BuildContext context,
+    String householdId,
+    String currentName,
+    String currentPhotoUrl,
+  ) async {
+    final nameController = TextEditingController(text: currentName);
+    XFile? pickedImage;
+    String photoUrl = currentPhotoUrl;
+    bool saving = false;
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> pickImage(ImageSource source) async {
+              final picker = ImagePicker();
+              final picked = await picker.pickImage(
+                source: source,
+                imageQuality: 80,
+                maxWidth: 512,
+              );
+              if (picked != null) {
+                setDialogState(() => pickedImage = picked);
+              }
+            }
+
+            ImageProvider? imageProvider;
+            if (pickedImage != null) {
+              imageProvider = FileImage(File(pickedImage!.path));
+            } else if (photoUrl.isNotEmpty) {
+              imageProvider = NetworkImage(photoUrl);
+            }
+
+            return AlertDialog(
+              title: const Text('Edit Household'),
+              content: SizedBox(
+                width: 360,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () => pickImage(ImageSource.gallery),
+                      child: Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 44,
+                            backgroundColor:
+                                const Color(0xFF5B8DEF).withOpacity(0.15),
+                            backgroundImage: imageProvider,
+                            child: imageProvider == null
+                                ? const Icon(
+                                    Icons.home_outlined,
+                                    size: 40,
+                                    color: Color(0xFF5B8DEF),
+                                  )
+                                : null,
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF5B8DEF),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.edit,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        TextButton.icon(
+                          onPressed: () => pickImage(ImageSource.camera),
+                          icon: const Icon(Icons.camera_alt_outlined, size: 18),
+                          label: const Text('Camera'),
+                        ),
+                        TextButton.icon(
+                          onPressed: () => pickImage(ImageSource.gallery),
+                          icon: const Icon(Icons.photo_library_outlined, size: 18),
+                          label: const Text('Gallery'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Household Name',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: const Icon(Icons.home_outlined),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: saving
+                      ? null
+                      : () async {
+                          setDialogState(() => saving = true);
+                          String? uploadedUrl;
+                          if (pickedImage != null) {
+                            final ref = FirebaseStorage.instance
+                                .ref()
+                                .child('household_photos/$householdId.jpg');
+                            await ref.putFile(File(pickedImage!.path));
+                            uploadedUrl = await ref.getDownloadURL();
+                          }
+                          await FirestoreService().updateHousehold(
+                            householdId,
+                            name: nameController.text.trim().isEmpty
+                                ? null
+                                : nameController.text.trim(),
+                            photoUrl: uploadedUrl,
+                          );
+                          if (dialogContext.mounted) {
+                            Navigator.of(dialogContext).pop();
+                          }
+                        },
+                  child: saving
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Save'),
+                ),
+              ],
             );
           },
         );
@@ -881,7 +1073,15 @@ class _HomeScreenState extends State<HomeScreen> {
     String recurrenceFrequency = 'Weekly';
 
     final categories = ['Cleaning', 'Groceries', 'Laundry', 'Bills', 'Other'];
-    final frequencies = ['Daily', 'Weekly', 'Monthly'];
+    final frequencies = [
+      'Daily',
+      'Every Other Day',
+      'Weekly',
+      'Biweekly',
+      'Monthly',
+      'Every 3 Months',
+      'Yearly',
+    ];
 
     Color difficultyColor(int d) {
       const colors = [
