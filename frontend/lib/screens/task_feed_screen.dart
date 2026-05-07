@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
+import 'swap_sheet.dart';
 
 class TaskFeedScreen extends StatefulWidget {
   final String householdId;
@@ -424,6 +425,23 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
             ],
           ),
           const SizedBox(width: 4),
+          if (!completed)
+            IconButton(
+              icon: const Icon(Icons.swap_horiz, color: Color(0xFF5B8DEF)),
+              tooltip: 'Swap or Reassign',
+              onPressed: () {
+                final uid =
+                    FirebaseAuth.instance.currentUser?.uid ?? '';
+                showSwapSheet(
+                  context,
+                  taskId: doc.id,
+                  taskTitle: title,
+                  householdId: widget.householdId,
+                  currentUserId: uid,
+                  currentUserName: _userName,
+                );
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
             onPressed: () async {

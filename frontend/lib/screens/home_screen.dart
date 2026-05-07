@@ -10,6 +10,8 @@ import 'create_household_screen.dart';
 import 'join_household_screen.dart';
 import 'task_feed_screen.dart';
 import 'profile_screen.dart';
+import 'settings_screen.dart';
+import 'swap_sheet.dart';
 import 'package:flutter/services.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -36,12 +38,20 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _navigateToSettings(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+    );
+  }
+
   String _formatRelativeTime(DateTime dt) {
     final diff = DateTime.now().difference(dt);
-    if (diff.inSeconds < 60) return 'Just now';
+    if (diff.inSeconds < 60) return '${diff.inSeconds}s ago';
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';
-    return '${diff.inDays}d ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${(diff.inDays / 7).floor()}w ago';
   }
 
   @override
@@ -85,14 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   onDestinationSelected: (index) {
                     if (index == 1) _navigateToAllTasks(context, householdId);
                     if (index == 2) _navigateToProfile(context);
-                    if (index == 3) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Settings coming soon'),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    }
+                    if (index == 3) _navigateToSettings(context);
                   },
                   destinations: const [
                     NavigationDestination(
@@ -138,6 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             _buildHouseholdCard(context, householdId),
                             const SizedBox(height: 24),
                             _buildSummaryCards(householdId, userName),
+                            _buildIncomingRequests(context, currentUser.uid),
                             const SizedBox(height: 28),
                             _buildTasksSection(context, householdId, userName, photoUrl),
                             const SizedBox(height: 28),
@@ -945,7 +949,22 @@ class _HomeScreenState extends State<HomeScreen> {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.swap_horiz, color: Color(0xFF5B8DEF)),
+            tooltip: 'Swap or Reassign',
+            onPressed: () {
+              final uid =
+                  FirebaseAuth.instance.currentUser?.uid ?? '';
+              showSwapSheet(
+                context,
+                taskId: docId,
+                taskTitle: title,
+                householdId: householdId,
+                currentUserId: uid,
+                currentUserName: userName,
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
             onPressed: () async {
@@ -954,6 +973,160 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildIncomingRequests(BuildContext context, String currentUserId) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirestoreService().getIncomingRequests(currentUserId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting ||
+            snapshot.hasError) {
+          return const SizedBox.shrink();
+        }
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 28),
+            Row(
+              children: [
+                const Text(
+                  'Pending Requests',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${docs.length}',
+                    style: const TextStyle(
+                      color: Colors.orange,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...docs.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final type = data['type'] as String? ?? 'reassign';
+              final fromName = data['fromUserName'] as String? ?? 'Someone';
+              final offerTitle =
+                  data['offerTaskTitle'] as String? ?? 'a task';
+              final requestTitle = data['requestTaskTitle'] as String?;
+
+              final description = type == 'swap' && requestTitle != null
+                  ? '$fromName wants to swap "$offerTitle" for your "$requestTitle"'
+                  : '$fromName wants to hand you "$offerTitle"';
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.orange.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 2, right: 12),
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        type == 'swap'
+                            ? Icons.swap_horiz
+                            : Icons.arrow_forward,
+                        color: Colors.orange,
+                        size: 16,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        description,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      children: [
+                        TextButton(
+                          onPressed: () async {
+                            await FirestoreService()
+                                .rejectSwapRequest(doc.id);
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.grey.shade600,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text('Decline'),
+                        ),
+                        const SizedBox(height: 4),
+                        ElevatedButton(
+                          onPressed: () async {
+                            await FirestoreService()
+                                .acceptSwapRequest(doc.id, data);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Request accepted!'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF5B8DEF),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            'Accept',
+                            style: TextStyle(fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        );
+      },
     );
   }
 
@@ -1507,14 +1680,7 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Settings',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Settings coming soon'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
+            onPressed: () => _navigateToSettings(context),
           ),
         ],
       ),

@@ -212,4 +212,87 @@ class FirestoreService {
       await _db.collection('households').doc(householdId).update(data);
     }
   }
+
+  // Swap / reassign requests
+
+  Future<void> createSwapRequest({
+    required String type, // 'swap' or 'reassign'
+    required String fromUserId,
+    required String fromUserName,
+    required String toUserId,
+    required String toUserName,
+    required String offerTaskId,
+    required String offerTaskTitle,
+    required String householdId,
+    String? requestTaskId,
+    String? requestTaskTitle,
+  }) async {
+    await _db.collection('swapRequests').add({
+      'type': type,
+      'fromUserId': fromUserId,
+      'fromUserName': fromUserName,
+      'toUserId': toUserId,
+      'toUserName': toUserName,
+      'offerTaskId': offerTaskId,
+      'offerTaskTitle': offerTaskTitle,
+      'requestTaskId': requestTaskId,
+      'requestTaskTitle': requestTaskTitle,
+      'householdId': householdId,
+      'status': 'pending',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Stream<QuerySnapshot> getIncomingRequests(String toUserId) {
+    return _db
+        .collection('swapRequests')
+        .where('toUserId', isEqualTo: toUserId)
+        .where('status', isEqualTo: 'pending')
+        .snapshots();
+  }
+
+  Future<void> acceptSwapRequest(
+    String requestId,
+    Map<String, dynamic> data,
+  ) async {
+    final type = data['type'] as String;
+    final offerTaskId = data['offerTaskId'] as String;
+    final toUserName = data['toUserName'] as String;
+    final fromUserName = data['fromUserName'] as String;
+
+    final batch = _db.batch();
+
+    batch.update(_db.collection('tasks').doc(offerTaskId), {
+      'assignedTo': toUserName,
+    });
+
+    if (type == 'swap') {
+      final requestTaskId = data['requestTaskId'] as String;
+      batch.update(_db.collection('tasks').doc(requestTaskId), {
+        'assignedTo': fromUserName,
+      });
+    }
+
+    batch.update(_db.collection('swapRequests').doc(requestId), {
+      'status': 'accepted',
+    });
+
+    await batch.commit();
+  }
+
+  Future<void> rejectSwapRequest(String requestId) async {
+    await _db
+        .collection('swapRequests')
+        .doc(requestId)
+        .update({'status': 'rejected'});
+  }
+
+  // Returns all tasks for a given member name (filter completed client-side)
+  Stream<QuerySnapshot> getMemberTasks(String householdId, String memberName) {
+    return _db
+        .collection('tasks')
+        .where('householdId', isEqualTo: householdId)
+        .where('assignedTo', isEqualTo: memberName)
+        .snapshots();
+  }
 }
