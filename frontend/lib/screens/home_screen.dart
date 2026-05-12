@@ -859,28 +859,28 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             onPressed: completed
                 ? null
-                : () async {
-                    await FirestoreService().completeTask(
+                : () {
+                    FirestoreService().completeTask(
                       docId: docId,
                       title: title,
                       userName: userName,
                       householdId: householdId,
                       photoUrl: photoUrl,
                     );
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                    ScaffoldMessenger.of(context)
+                      ..hideCurrentSnackBar()
+                      ..showSnackBar(
                         SnackBar(
                           content: const Text('Task completed!'),
                           duration: const Duration(seconds: 4),
                           action: SnackBarAction(
                             label: 'Undo',
-                            onPressed: () async {
-                              await FirestoreService().uncompleteTask(docId);
+                            onPressed: () {
+                              FirestoreService().uncompleteTask(docId);
                             },
                           ),
                         ),
                       );
-                    }
                   },
           ),
           const SizedBox(width: 8),

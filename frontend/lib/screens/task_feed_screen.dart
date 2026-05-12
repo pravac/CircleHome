@@ -170,10 +170,22 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                         );
                       }
 
-                      final incomplete = docs.where((d) {
+                      final now = DateTime.now();
+
+                      final overdue = docs.where((d) {
                         final data = d.data() as Map<String, dynamic>;
-                        return data['completed'] != true;
+                        if (data['completed'] == true) return false;
+                        final dueTs = data['dueDateTime'] as Timestamp?;
+                        return dueTs != null && dueTs.toDate().isBefore(now);
                       }).toList();
+
+                      final open = docs.where((d) {
+                        final data = d.data() as Map<String, dynamic>;
+                        if (data['completed'] == true) return false;
+                        final dueTs = data['dueDateTime'] as Timestamp?;
+                        return dueTs == null || !dueTs.toDate().isBefore(now);
+                      }).toList();
+
                       final complete = docs.where((d) {
                         final data = d.data() as Map<String, dynamic>;
                         return data['completed'] == true;
@@ -185,10 +197,16 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                           vertical: 8,
                         ),
                         children: [
-                          if (incomplete.isNotEmpty) ...[
-                            _sectionHeader('Open (${incomplete.length})', Colors.blue),
+                          if (overdue.isNotEmpty) ...[
+                            _sectionHeader('Overdue (${overdue.length})', Colors.red),
                             const SizedBox(height: 10),
-                            ...incomplete.map((doc) => _taskCard(context, doc)),
+                            ...overdue.map((doc) => _taskCard(context, doc)),
+                            const SizedBox(height: 24),
+                          ],
+                          if (open.isNotEmpty) ...[
+                            _sectionHeader('Open (${open.length})', Colors.blue),
+                            const SizedBox(height: 10),
+                            ...open.map((doc) => _taskCard(context, doc)),
                             const SizedBox(height: 24),
                           ],
                           if (complete.isNotEmpty) ...[
@@ -196,6 +214,21 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                             const SizedBox(height: 10),
                             ...complete.map((doc) => _taskCard(context, doc)),
                           ],
+                          if (overdue.isEmpty && open.isEmpty && complete.isEmpty)
+                            Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(32),
+                                child: Text(
+                                  _showMyTasks
+                                      ? 'No tasks assigned to you'
+                                      : 'No tasks yet',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade400,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
                         ],
                       );
                     },
@@ -243,6 +276,10 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
     final difficulty = (data['difficulty'] as int?) ?? 0;
     final isRecurring = data['isRecurring'] as bool? ?? false;
     final recurrenceFrequency = data['recurrenceFrequency'] as String? ?? '';
+    final dueTs = data['dueDateTime'] as Timestamp?;
+    final isOverdue = !completed &&
+        dueTs != null &&
+        dueTs.toDate().isBefore(DateTime.now());
 
     Color categoryColor;
     switch (category) {
@@ -280,19 +317,20 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
               size: 26,
             ),
             tooltip: completed ? 'Mark as incomplete' : null,
-            onPressed: () async {
+            onPressed: () {
+              final messenger = ScaffoldMessenger.of(context);
               if (completed) {
-                await FirestoreService().uncompleteTask(doc.id);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                FirestoreService().uncompleteTask(doc.id);
+                messenger
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(
                     const SnackBar(
                       content: Text('Task marked incomplete.'),
                       duration: Duration(seconds: 2),
                     ),
                   );
-                }
               } else {
-                await FirestoreService().completeTask(
+                FirestoreService().completeTask(
                   docId: doc.id,
                   title: title,
                   userName: _userName.isNotEmpty
@@ -301,20 +339,20 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                   householdId: widget.householdId,
                   photoUrl: _photoUrl,
                 );
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                messenger
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(
                     SnackBar(
                       content: const Text('Task completed!'),
                       duration: const Duration(seconds: 4),
                       action: SnackBarAction(
                         label: 'Undo',
-                        onPressed: () async {
-                          await FirestoreService().uncompleteTask(doc.id);
+                        onPressed: () {
+                          FirestoreService().uncompleteTask(doc.id);
                         },
                       ),
                     ),
                   );
-                }
               }
             },
           ),
@@ -397,7 +435,11 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
               Text(
                 dueLabel,
                 style: TextStyle(
-                  color: completed ? Colors.grey.shade400 : Colors.orange,
+                  color: completed
+                      ? Colors.grey.shade400
+                      : isOverdue
+                          ? Colors.red
+                          : Colors.orange,
                   fontWeight: FontWeight.w600,
                   fontSize: 13,
                 ),
