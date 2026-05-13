@@ -12,6 +12,7 @@ import 'task_feed_screen.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
 import 'swap_sheet.dart';
+import 'edit_task_screen.dart';
 import 'package:flutter/services.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -859,7 +860,29 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             onPressed: completed
                 ? null
-                : () {
+                : () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Mark as complete?'),
+                        content: Text('"$title" will be marked done.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => Navigator.of(ctx).pop(true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('Complete'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirmed != true || !context.mounted) return;
                     FirestoreService().completeTask(
                       docId: docId,
                       title: title,
@@ -952,6 +975,22 @@ class _HomeScreenState extends State<HomeScreen> {
               color: Colors.orange,
               fontWeight: FontWeight.w600,
             ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit_outlined, color: Colors.grey),
+            tooltip: 'Edit Task',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => EditTaskScreen(
+                    docId: docId,
+                    taskData: data,
+                    householdId: householdId,
+                  ),
+                ),
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.swap_horiz, color: Color(0xFF5B8DEF)),

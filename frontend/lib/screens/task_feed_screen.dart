@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
 import 'swap_sheet.dart';
+import 'edit_task_screen.dart';
 
 class TaskFeedScreen extends StatefulWidget {
   final String householdId;
@@ -317,7 +318,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
               size: 26,
             ),
             tooltip: completed ? 'Mark as incomplete' : null,
-            onPressed: () {
+            onPressed: () async {
               final messenger = ScaffoldMessenger.of(context);
               if (completed) {
                 FirestoreService().uncompleteTask(doc.id);
@@ -330,6 +331,28 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                     ),
                   );
               } else {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Mark as complete?'),
+                    content: Text('"$title" will be marked done.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        child: const Text('Cancel'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('Complete'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirmed != true || !context.mounted) return;
                 FirestoreService().completeTask(
                   docId: doc.id,
                   title: title,
@@ -470,6 +493,23 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
             ],
           ),
           const SizedBox(width: 4),
+          if (!completed)
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, color: Colors.grey),
+              tooltip: 'Edit Task',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EditTaskScreen(
+                      docId: doc.id,
+                      taskData: data,
+                      householdId: widget.householdId,
+                    ),
+                  ),
+                );
+              },
+            ),
           if (!completed)
             IconButton(
               icon: const Icon(Icons.swap_horiz, color: Color(0xFF5B8DEF)),

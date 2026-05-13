@@ -92,6 +92,29 @@ class FirestoreService {
     });
   }
 
+  Future<void> updateTask({
+    required String docId,
+    required String title,
+    required String category,
+    required String assignedTo,
+    required String dueLabel,
+    required DateTime dueDateTime,
+    int difficulty = 3,
+    bool isRecurring = false,
+    String recurrenceFrequency = 'none',
+  }) async {
+    await _db.collection('tasks').doc(docId).update({
+      'title': title,
+      'category': category,
+      'assignedTo': assignedTo,
+      'dueLabel': dueLabel,
+      'dueDateTime': Timestamp.fromDate(dueDateTime),
+      'difficulty': difficulty,
+      'isRecurring': isRecurring,
+      'recurrenceFrequency': recurrenceFrequency,
+    });
+  }
+
   Future<void> deleteTask(String docId) async {
     await _db.collection('tasks').doc(docId).delete();
   }
