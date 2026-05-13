@@ -1702,19 +1702,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 30),
           IconButton(
-            icon: const Icon(Icons.emoji_events_outlined),
-            tooltip: 'Leaderboard',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Leaderboard coming soon'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 30),
-          IconButton(
             icon: const Icon(Icons.person_outline),
             tooltip: 'Profile',
             onPressed: () => _navigateToProfile(context),
