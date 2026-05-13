@@ -339,20 +339,23 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                   householdId: widget.householdId,
                   photoUrl: _photoUrl,
                 );
-                messenger
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(
-                    SnackBar(
-                      content: const Text('Task completed!'),
-                      duration: const Duration(seconds: 4),
-                      action: SnackBarAction(
-                        label: 'Undo',
-                        onPressed: () {
-                          FirestoreService().uncompleteTask(doc.id);
-                        },
-                      ),
+                messenger.hideCurrentSnackBar();
+                final controller = messenger.showSnackBar(
+                  SnackBar(
+                    content: const Text('Task completed!'),
+                    duration: const Duration(seconds: 3),
+                    action: SnackBarAction(
+                      label: 'Undo',
+                      onPressed: () {
+                        FirestoreService().uncompleteTask(doc.id);
+                      },
                     ),
-                  );
+                  ),
+                );
+                Future.delayed(
+                  const Duration(seconds: 4),
+                  controller.close,
+                );
               }
             },
           ),

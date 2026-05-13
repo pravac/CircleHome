@@ -867,20 +867,24 @@ class _HomeScreenState extends State<HomeScreen> {
                       householdId: householdId,
                       photoUrl: photoUrl,
                     );
-                    ScaffoldMessenger.of(context)
-                      ..hideCurrentSnackBar()
-                      ..showSnackBar(
-                        SnackBar(
-                          content: const Text('Task completed!'),
-                          duration: const Duration(seconds: 4),
-                          action: SnackBarAction(
-                            label: 'Undo',
-                            onPressed: () {
-                              FirestoreService().uncompleteTask(docId);
-                            },
-                          ),
+                    final messenger = ScaffoldMessenger.of(context);
+                    messenger.hideCurrentSnackBar();
+                    final controller = messenger.showSnackBar(
+                      SnackBar(
+                        content: const Text('Task completed!'),
+                        duration: const Duration(seconds: 3),
+                        action: SnackBarAction(
+                          label: 'Undo',
+                          onPressed: () {
+                            FirestoreService().uncompleteTask(docId);
+                          },
                         ),
-                      );
+                      ),
+                    );
+                    Future.delayed(
+                      const Duration(seconds: 4),
+                      controller.close,
+                    );
                   },
           ),
           const SizedBox(width: 8),
