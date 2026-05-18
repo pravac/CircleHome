@@ -222,7 +222,11 @@ class _LoginScreenState extends State<LoginScreen> {
               clipBehavior: Clip.antiAlias,
               child: Image.asset(
                 'lib/assets/images/CircleHomeLogo.png',
-                fit: BoxFit.cover,
+                width: 72,
+                height: 72,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+                isAntiAlias: true,
                 errorBuilder: (_, __, ___) {
                   return const Icon(
                     Icons.home_rounded,

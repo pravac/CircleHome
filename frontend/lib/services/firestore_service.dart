@@ -318,4 +318,11 @@ class FirestoreService {
         .where('assignedTo', isEqualTo: memberName)
         .snapshots();
   }
+
+Future<void> leaveHousehold(String uid) async {
+  await _db.collection('users').doc(uid).update({
+    'householdId': FieldValue.delete(),
+  });
+}
+
 }

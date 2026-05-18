@@ -3,9 +3,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/main_shell.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'providers/app_state.dart';
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,7 +49,7 @@ class CircleHomeApp extends StatelessWidget {
           });
 
           if (user != null) {
-            return const HomeScreen();
+            return MainShell();
           }
 
           return const LoginScreen();

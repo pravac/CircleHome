@@ -16,7 +16,8 @@ import 'edit_task_screen.dart';
 import 'package:flutter/services.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final void Function(String)? onHouseholdLoaded;
+  const HomeScreen({super.key, this.onHouseholdLoaded});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -86,56 +87,21 @@ class _HomeScreenState extends State<HomeScreen> {
         if (householdId == null || householdId.isEmpty) {
           return _buildNoHouseholdScreen(context);
         }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          widget.onHouseholdLoaded?.call(householdId);
+        });
 
         return Scaffold(
           backgroundColor: const Color(0xFFF4F6FB),
-          bottomNavigationBar: isWide
-              ? null
-              : NavigationBar(
-                  selectedIndex: 0,
-                  onDestinationSelected: (index) {
-                    if (index == 1) _navigateToAllTasks(context, householdId);
-                    if (index == 2) _navigateToProfile(context);
-                    if (index == 3) _navigateToSettings(context);
-                  },
-                  destinations: const [
-                    NavigationDestination(
-                      icon: Icon(Icons.home_outlined),
-                      selectedIcon: Icon(Icons.home),
-                      label: 'Home',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.checklist_outlined),
-                      selectedIcon: Icon(Icons.checklist),
-                      label: 'All Tasks',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.person_outline),
-                      selectedIcon: Icon(Icons.person),
-                      label: 'Profile',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.settings_outlined),
-                      selectedIcon: Icon(Icons.settings),
-                      label: 'Settings',
-                    ),
-                  ],
-                ),
           body: SafeArea(
             child: Stack(
               children: [
                 Row(
                   children: [
-                    if (isWide) _buildSidebar(context, householdId),
                     Expanded(
                       child: Center(
                         child: SingleChildScrollView(
-                          padding: EdgeInsets.fromLTRB(
-                            24,
-                            24,
-                            24,
-                            isWide ? 110 : 130,
-                          ),
+                          padding: EdgeInsets.fromLTRB(24, 24, 24, 130),
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 1100),
                             child: Column(
@@ -159,11 +125,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-
                 Positioned(
-                  left: isWide ? 114 : 24,
+                  left: 24,
                   right: 24,
-                  bottom: isWide ? 24 : 12,
+                  bottom: 12,
                   child: _buildBottomButtons(context, householdId),
                 ),
               ],
@@ -174,98 +139,85 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildNoHouseholdScreen(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
-      body: Center(
-        child: Container(
-          width: 520,
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Welcome to CircleHome',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'You are not currently in a household. Create one or join one using an invite code.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey.shade700, fontSize: 16),
-              ),
-              const SizedBox(height: 28),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        final created = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const CreateHouseholdScreen(),
-                          ),
-                        );
-                        if (created == true && context.mounted) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const HomeScreen(),
-                            ),
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+Widget _buildNoHouseholdScreen(BuildContext context) {
+  return Scaffold(
+    backgroundColor: const Color(0xFFF4F6FB),
+    body: Center(
+      child: Container(
+        width: 520,
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Welcome to CircleHome',
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'You are not currently in a household. Create one or join one using an invite code.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 16),
+            ),
+            const SizedBox(height: 28),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CreateHouseholdScreen(),
                         ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Text('Create Household'),
                     ),
+                    child: const Text('Create Household'),
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        final joined = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const JoinHouseholdScreen(),
-                          ),
-                        );
-                        if (joined == true && context.mounted) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const HomeScreen(),
-                            ),
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const JoinHouseholdScreen(),
                         ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Text('Join Household'),
                     ),
+                    child: const Text('Join Household'),
                   ),
-                ],
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   Widget _buildHeader(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -327,92 +279,46 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    children: [
-                      if (householdPhotoUrl.isNotEmpty) ...[
-                        CircleAvatar(
-                          radius: 22,
-                          backgroundImage: NetworkImage(householdPhotoUrl),
-                        ),
-                        const SizedBox(width: 12),
-                      ] else ...[
-                        CircleAvatar(
-                          radius: 22,
-                          backgroundColor:
-                              const Color(0xFF5B8DEF).withOpacity(0.15),
-                          child: const Icon(
-                            Icons.home_outlined,
-                            color: Color(0xFF5B8DEF),
-                            size: 22,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                      ],
-                      Expanded(
-                        child: Text(
-                          name,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined, size: 20),
-                        tooltip: 'Edit household',
-                        onPressed: () => _showEditHouseholdDialog(
-                          context,
-                          householdId,
-                          name,
-                          householdPhotoUrl,
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed: () async {
-                          final created = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const CreateHouseholdScreen(),
-                            ),
-                          );
-                          if (created == true && context.mounted) {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const HomeScreen(),
-                              ),
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                        ),
-                        child: const Text('Create New'),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () async {
-                          final joined = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const JoinHouseholdScreen(),
-                            ),
-                          );
-                          if (joined == true && context.mounted) {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const HomeScreen(),
-                              ),
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                        ),
-                        child: const Text('Join'),
-                      ),
-                    ],
-                  ),
+  children: [
+    if (householdPhotoUrl.isNotEmpty) ...[
+      CircleAvatar(
+        radius: 22,
+        backgroundImage: NetworkImage(householdPhotoUrl),
+      ),
+      const SizedBox(width: 12),
+    ] else ...[
+      CircleAvatar(
+        radius: 22,
+        backgroundColor: const Color(0xFF5B8DEF).withOpacity(0.15),
+        child: const Icon(
+          Icons.home_outlined,
+          color: Color(0xFF5B8DEF),
+          size: 22,
+        ),
+      ),
+      const SizedBox(width: 12),
+    ],
+    Expanded(
+      child: Text(
+        name,
+        style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ),
+    IconButton(
+      icon: const Icon(Icons.edit_outlined, size: 20),
+      tooltip: 'Edit household',
+      onPressed: () => _showEditHouseholdDialog(
+        context,
+        householdId,
+        name,
+        householdPhotoUrl,
+      ),
+    ),
+  ],
+),
                   const SizedBox(height: 10),
                   Row(
                     children: [
@@ -1693,37 +1599,6 @@ class _HomeScreenState extends State<HomeScreen> {
               fontSize: 11,
               fontWeight: FontWeight.bold,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSidebar(BuildContext context, String householdId) {
-    return Container(
-      width: 90,
-      color: Colors.white,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.home, size: 30, color: Colors.blue),
-          const SizedBox(height: 30),
-          IconButton(
-            icon: const Icon(Icons.checklist),
-            tooltip: 'All Tasks',
-            onPressed: () => _navigateToAllTasks(context, householdId),
-          ),
-          const SizedBox(height: 30),
-          IconButton(
-            icon: const Icon(Icons.person_outline),
-            tooltip: 'Profile',
-            onPressed: () => _navigateToProfile(context),
-          ),
-          const SizedBox(height: 30),
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Settings',
-            onPressed: () => _navigateToSettings(context),
           ),
         ],
       ),
