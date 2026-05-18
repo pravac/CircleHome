@@ -122,38 +122,49 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
           body: SafeArea(
-            child: Row(
+            child: Stack(
               children: [
-                if (isWide) _buildSidebar(context, householdId),
-                Expanded(
-                  child: Center(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 24,
-                      ),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 1100),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildHeader(context),
-                            const SizedBox(height: 16),
-                            _buildHouseholdCard(context, householdId),
-                            const SizedBox(height: 24),
-                            _buildSummaryCards(householdId, userName),
-                            _buildIncomingRequests(context, currentUser.uid),
-                            const SizedBox(height: 28),
-                            _buildTasksSection(context, householdId, userName, photoUrl),
-                            const SizedBox(height: 28),
-                            _buildActivitySection(householdId),
-                            const SizedBox(height: 28),
-                            _buildBottomButtons(context, householdId),
-                          ],
+                Row(
+                  children: [
+                    if (isWide) _buildSidebar(context, householdId),
+                    Expanded(
+                      child: Center(
+                        child: SingleChildScrollView(
+                          padding: EdgeInsets.fromLTRB(
+                            24,
+                            24,
+                            24,
+                            isWide ? 110 : 130,
+                          ),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 1100),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildHeader(context),
+                                const SizedBox(height: 16),
+                                _buildHouseholdCard(context, householdId),
+                                const SizedBox(height: 24),
+                                _buildSummaryCards(householdId, userName),
+                                _buildIncomingRequests(context, currentUser.uid),
+                                const SizedBox(height: 28),
+                                _buildTasksSection(context, householdId, userName, photoUrl),
+                                const SizedBox(height: 28),
+                                _buildActivitySection(householdId),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
+                ),
+
+                Positioned(
+                  left: isWide ? 114 : 24,
+                  right: 24,
+                  bottom: isWide ? 24 : 12,
+                  child: _buildBottomButtons(context, householdId),
                 ),
               ],
             ),
@@ -1211,6 +1222,8 @@ class _HomeScreenState extends State<HomeScreen> {
               return bTime.compareTo(aTime);
             });
 
+            final recentDocs = docs.take(5).toList();
+
             if (docs.isEmpty) {
               return Container(
                 width: double.infinity,
@@ -1224,7 +1237,7 @@ class _HomeScreenState extends State<HomeScreen> {
             }
 
             return Column(
-              children: docs.map((doc) {
+              children: recentDocs.map((doc) {
                 final data = doc.data() as Map<String, dynamic>;
                 final text = data['text'] as String? ?? 'Activity';
                 final createdAt = data['createdAt'] as Timestamp?;
