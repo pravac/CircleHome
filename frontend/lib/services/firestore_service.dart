@@ -177,16 +177,18 @@ class FirestoreService {
   }) async {
     final code = _generateCode();
 
-    final doc = await _db.collection('households').add({
-      'name': name,
-      'code': code,
-      'createdBy': userId,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+  final doc = await _db.collection('households').add({
+    'name': name,
+    'code': code,
+    'createdBy': userId,
+    'ownerId': userId,
+    'createdAt': FieldValue.serverTimestamp(),
+  });
 
-    await _db.collection('users').doc(userId).update({
-      'householdId': doc.id,
-    });
+  await _db.collection('users').doc(userId).update({
+    'householdId': doc.id,
+    'role': 'owner',
+  });
 
     return code;
   }
@@ -207,6 +209,7 @@ class FirestoreService {
 
     await _db.collection('users').doc(userId).update({
       'householdId': householdId,
+      'role': 'member',
     });
 
     return true;
@@ -322,6 +325,13 @@ class FirestoreService {
 Future<void> leaveHousehold(String uid) async {
   await _db.collection('users').doc(uid).update({
     'householdId': FieldValue.delete(),
+  });
+}
+
+Future<void> kickMember(String uid) async {
+  await _db.collection('users').doc(uid).update({
+    'householdId': FieldValue.delete(),
+    'role': FieldValue.delete(),
   });
 }
 

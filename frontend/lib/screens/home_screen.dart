@@ -33,6 +33,183 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _showMembersSheet(
+  BuildContext context,
+  List<QueryDocumentSnapshot> memberDocs,
+  Map<String, dynamic> householdData,
+) {
+  final currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+  final ownerId = householdData['ownerId'] as String? ?? '';
+  final currentUserIsOwner = currentUid == ownerId;
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (ctx) => DraggableScrollableSheet(
+      initialChildSize: 0.5,
+      minChildSize: 0.3,
+      maxChildSize: 0.85,
+      expand: false,
+      builder: (ctx, scrollController) => Column(
+        children: [
+          const SizedBox(height: 12),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Members',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: ListView.builder(
+              controller: scrollController,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              itemCount: memberDocs.length,
+              itemBuilder: (ctx, i) {
+                final data = memberDocs[i].data() as Map<String, dynamic>;
+                final memberId = memberDocs[i].id;
+                final displayName =
+                    (data['name'] as String?)?.trim().isNotEmpty == true
+                        ? data['name'] as String
+                        : (data['email'] as String? ?? 'Member');
+                final memberPhoto = data['photoUrl'] as String? ?? '';
+                final role = data['role'] as String? ?? 'member';
+                final isOwner = role == 'owner';
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF4F6FB),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundImage: memberPhoto.isNotEmpty
+                            ? NetworkImage(memberPhoto)
+                            : null,
+                        child: memberPhoto.isEmpty
+                            ? const Icon(Icons.person, size: 20)
+                            : null,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          displayName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: isOwner
+                              ? Colors.amber.withOpacity(0.2)
+                              : Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          isOwner ? '👑 Owner' : 'Member',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isOwner
+                                ? Colors.amber.shade800
+                                : Colors.blue,
+                          ),
+                        ),
+                      ),
+                      if (currentUserIsOwner && memberId != currentUid) ...[
+                        const SizedBox(width: 8),
+                        InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: () async {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Remove Member'),
+                                content: Text(
+                                  'Are you sure you want to remove $displayName?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(ctx).pop(false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () =>
+                                        Navigator.of(ctx).pop(true),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    child: const Text('Remove'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirmed == true) {
+                              await FirestoreService().kickMember(memberId);
+                              if (context.mounted) {
+                                Navigator.of(ctx).pop();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        '$displayName has been removed.'),
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'Remove',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.red,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    ),
+  );
+}
+
   void _navigateToProfile(BuildContext context) {
     Navigator.push(
       context,
@@ -345,59 +522,10 @@ Widget _buildNoHouseholdScreen(BuildContext context) {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '$memberCount member${memberCount == 1 ? '' : 's'} in household',
-                    style: TextStyle(
-                      color: Colors.grey.shade700,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: memberDocs.map((doc) {
-                      final data = doc.data() as Map<String, dynamic>;
-                      final displayName =
-                          (data['name'] as String?)?.trim().isNotEmpty == true
-                              ? data['name'] as String
-                              : (data['email'] as String? ?? 'Member');
-                      final memberPhoto = data['photoUrl'] as String? ?? '';
-
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF4F6FB),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            CircleAvatar(
-                              radius: 14,
-                              backgroundImage: memberPhoto.isNotEmpty
-                                  ? NetworkImage(memberPhoto)
-                                  : null,
-                              child: memberPhoto.isEmpty
-                                  ? const Icon(Icons.person, size: 16)
-                                  : null,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              displayName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ),
+_MembersSection(
+  memberDocs: memberDocs,
+  householdData: householdSnapshot.data!.data() ?? {},
+),
                 ],
               ),
             );
@@ -1663,6 +1791,214 @@ class _ActivityTile extends StatelessWidget {
         title: Text(text),
         trailing: Text(time),
       ),
+    );
+  }
+}
+
+class _MembersSection extends StatefulWidget {
+  final List<QueryDocumentSnapshot> memberDocs;
+  final Map<String, dynamic> householdData;
+
+  const _MembersSection({
+    required this.memberDocs,
+    required this.householdData,
+  });
+
+  @override
+  State<_MembersSection> createState() => _MembersSectionState();
+}
+
+class _MembersSectionState extends State<_MembersSection> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final ownerId = widget.householdData['ownerId'] as String? ?? '';
+    final currentUserIsOwner = currentUid == ownerId;
+    final memberCount = widget.memberDocs.length;
+
+    return Column(
+      children: [
+        const SizedBox(height: 10),
+        InkWell(
+          onTap: () => setState(() => _expanded = !_expanded),
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                Icon(Icons.group_outlined,
+                    size: 16, color: Colors.grey.shade600),
+                const SizedBox(width: 6),
+                Text(
+                  '$memberCount member${memberCount == 1 ? '' : 's'} in household',
+                  style: TextStyle(color: Colors.grey.shade700, fontSize: 15),
+                ),
+                const Spacer(),
+                Text(
+                  _expanded ? 'Hide' : 'View Members',
+                  style: const TextStyle(
+                    color: Color(0xFF5B8DEF),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                AnimatedRotation(
+                  turns: _expanded ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 250),
+                  child: const Icon(
+                    Icons.keyboard_arrow_down,
+                    color: Color(0xFF5B8DEF),
+                    size: 18,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+          child: _expanded
+              ? Column(
+                  children: [
+                    const SizedBox(height: 10),
+                    ...widget.memberDocs.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final memberId = doc.id;
+                      final displayName =
+                          (data['name'] as String?)?.trim().isNotEmpty == true
+                              ? data['name'] as String
+                              : (data['email'] as String? ?? 'Member');
+                      final memberPhoto = data['photoUrl'] as String? ?? '';
+                      final role = data['role'] as String? ?? 'member';
+                      final isOwner = role == 'owner';
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF4F6FB),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 16,
+                              backgroundImage: memberPhoto.isNotEmpty
+                                  ? NetworkImage(memberPhoto)
+                                  : null,
+                              child: memberPhoto.isEmpty
+                                  ? const Icon(Icons.person, size: 18)
+                                  : null,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                displayName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: isOwner
+                                    ? Colors.amber.withOpacity(0.2)
+                                    : Colors.blue.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                isOwner ? '👑 Owner' : 'Member',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: isOwner
+                                      ? Colors.amber.shade800
+                                      : Colors.blue,
+                                ),
+                              ),
+                            ),
+                            if (currentUserIsOwner &&
+                                memberId != currentUid) ...[
+                              const SizedBox(width: 8),
+                              InkWell(
+                                borderRadius: BorderRadius.circular(8),
+                                onTap: () async {
+                                  final confirmed = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: const Text('Remove Member'),
+                                      content: Text(
+                                        'Are you sure you want to remove $displayName?',
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(false),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(true),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red,
+                                            foregroundColor: Colors.white,
+                                          ),
+                                          child: const Text('Remove'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirmed == true) {
+                                    await FirestoreService()
+                                        .kickMember(memberId);
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                              '$displayName has been removed.'),
+                                          duration:
+                                              const Duration(seconds: 2),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Text(
+                                    'Remove',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                )
+              : const SizedBox.shrink(),
+        ),
+      ],
     );
   }
 }
