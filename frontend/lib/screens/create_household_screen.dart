@@ -42,10 +42,10 @@ class _CreateHouseholdScreenState extends State<CreateHouseholdScreen> {
       if (mounted) {
         Navigator.pop(context, true);
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to create household')),
+          SnackBar(content: Text('Failed to create household: $e')),
         );
       }
     } finally {

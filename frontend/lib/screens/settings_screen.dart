@@ -68,7 +68,7 @@ Future<void> _confirmLeaveHousehold() async {
   if (confirmed == true) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
-    await FirestoreService().leaveHousehold(uid);
+    await FirestoreService().leaveHousehold(uid, _householdId);
   }
 }
 

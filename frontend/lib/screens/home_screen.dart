@@ -13,7 +13,9 @@ import 'profile_screen.dart';
 import 'settings_screen.dart';
 import 'swap_sheet.dart';
 import 'edit_task_screen.dart';
+import 'household_switcher_sheet.dart';
 import 'package:flutter/services.dart';
+import 'add_task_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   final void Function(String)? onHouseholdLoaded;
@@ -485,6 +487,11 @@ Widget _buildNoHouseholdScreen(BuildContext context) {
       ),
     ),
     IconButton(
+      icon: const Icon(Icons.expand_circle_down_outlined, size: 20),
+      tooltip: 'Switch household',
+      onPressed: () => showHouseholdSwitcherSheet(context),
+    ),
+    IconButton(
       icon: const Icon(Icons.edit_outlined, size: 20),
       tooltip: 'Edit household',
       onPressed: () => _showEditHouseholdDialog(
@@ -870,6 +877,10 @@ _MembersSection(
     final difficulty = (data['difficulty'] as int?) ?? 0;
     final isRecurring = data['isRecurring'] as bool? ?? false;
     final recurrenceFrequency = data['recurrenceFrequency'] as String? ?? '';
+    final dueTs = data['dueDateTime'] as Timestamp?;
+    final isOverdue = !completed &&
+        dueTs != null &&
+        dueTs.toDate().isBefore(DateTime.now());
 
     Color categoryColor;
     switch (category) {
@@ -895,6 +906,9 @@ _MembersSection(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
+        border: isOverdue
+            ? Border.all(color: Colors.red.withOpacity(0.35), width: 1.5)
+            : null,
       ),
       child: Row(
         children: [
@@ -1016,8 +1030,8 @@ _MembersSection(
           ),
           Text(
             dueLabel,
-            style: const TextStyle(
-              color: Colors.orange,
+            style: TextStyle(
+              color: isOverdue ? Colors.red : Colors.orange,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1293,7 +1307,7 @@ _MembersSection(
       children: [
         Expanded(
           child: ElevatedButton(
-            onPressed: () => _showAddTaskDialog(context, householdId),
+            onPressed: () => showAddTaskDialog(context, householdId),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue,
               shape: RoundedRectangleBorder(
@@ -1319,366 +1333,6 @@ _MembersSection(
           ),
         ),
       ],
-    );
-  }
-
-  Future<void> _showAddTaskDialog(
-    BuildContext context,
-    String householdId,
-  ) async {
-    final titleController = TextEditingController();
-    String? selectedCategory;
-    String? selectedAssignee;
-    DateTime? selectedDate;
-    TimeOfDay? selectedTime;
-    int selectedDifficulty = 3;
-    bool isRecurring = false;
-    String recurrenceFrequency = 'Weekly';
-
-    final categories = ['Cleaning', 'Groceries', 'Laundry', 'Bills', 'Other'];
-    final frequencies = [
-      'Daily',
-      'Every Other Day',
-      'Weekly',
-      'Biweekly',
-      'Monthly',
-      'Every 3 Months',
-      'Yearly',
-    ];
-
-    Color difficultyColor(int d) {
-      const colors = [
-        Colors.green,
-        Color(0xFF8BC34A),
-        Colors.orange,
-        Colors.deepOrange,
-        Colors.red,
-      ];
-      return colors[(d - 1).clamp(0, 4)];
-    }
-
-    String difficultyLabel(int d) {
-      switch (d) {
-        case 1:
-          return 'Very Easy';
-        case 2:
-          return 'Easy';
-        case 3:
-          return 'Moderate';
-        case 4:
-          return 'Hard';
-        case 5:
-          return 'Very Hard';
-        default:
-          return '';
-      }
-    }
-
-    await showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            Future<void> pickDate() async {
-              final picked = await showDatePicker(
-                context: context,
-                initialDate: DateTime.now(),
-                firstDate: DateTime.now().subtract(const Duration(days: 1)),
-                lastDate: DateTime(2100),
-              );
-              if (picked != null) {
-                setDialogState(() => selectedDate = picked);
-              }
-            }
-
-            Future<void> pickTime() async {
-              final picked = await showTimePicker(
-                context: context,
-                initialTime: TimeOfDay.now(),
-              );
-              if (picked != null) {
-                setDialogState(() => selectedTime = picked);
-              }
-            }
-
-            return AlertDialog(
-              title: const Text('Add Task'),
-              content: SizedBox(
-                width: 420,
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: FirestoreService().getHouseholdMembers(householdId),
-                  builder: (context, snapshot) {
-                    final memberDocs = snapshot.data?.docs ?? [];
-                    final memberNames = memberDocs.map((doc) {
-                      final data = doc.data() as Map<String, dynamic>;
-                      final name = (data['name'] as String?)?.trim();
-                      final email = (data['email'] as String?)?.trim();
-                      if (name != null && name.isNotEmpty) return name;
-                      return email ?? 'Member';
-                    }).toList();
-
-                    return SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          TextField(
-                            controller: titleController,
-                            decoration: const InputDecoration(
-                              labelText: 'Task Title',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          DropdownButtonFormField<String>(
-                            value: selectedCategory,
-                            decoration: const InputDecoration(
-                              labelText: 'Category',
-                              border: OutlineInputBorder(),
-                            ),
-                            items: categories
-                                .map((c) => DropdownMenuItem(
-                                      value: c,
-                                      child: Text(c),
-                                    ))
-                                .toList(),
-                            onChanged: (v) =>
-                                setDialogState(() => selectedCategory = v),
-                          ),
-                          const SizedBox(height: 16),
-
-                          InkWell(
-                            onTap: pickDate,
-                            child: InputDecorator(
-                              decoration: const InputDecoration(
-                                labelText: 'Due Date',
-                                border: OutlineInputBorder(),
-                              ),
-                              child: Text(
-                                selectedDate == null
-                                    ? 'Select date'
-                                    : '${selectedDate!.month.toString().padLeft(2, '0')}/${selectedDate!.day.toString().padLeft(2, '0')}/${selectedDate!.year}',
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-
-                          InkWell(
-                            onTap: pickTime,
-                            child: InputDecorator(
-                              decoration: const InputDecoration(
-                                labelText: 'Due Time',
-                                border: OutlineInputBorder(),
-                              ),
-                              child: Text(
-                                selectedTime == null
-                                    ? 'Select time'
-                                    : selectedTime!.format(context),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          DropdownButtonFormField<String>(
-                            value: selectedAssignee,
-                            decoration: const InputDecoration(
-                              labelText: 'Assign To',
-                              border: OutlineInputBorder(),
-                            ),
-                            items: memberNames
-                                .map((m) => DropdownMenuItem(
-                                      value: m,
-                                      child: Text(m),
-                                    ))
-                                .toList(),
-                            onChanged: (v) =>
-                                setDialogState(() => selectedAssignee = v),
-                          ),
-                          const SizedBox(height: 20),
-
-                          Text(
-                            'Difficulty',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: List.generate(5, (i) {
-                              final d = i + 1;
-                              final isSelected = selectedDifficulty == d;
-                              final color = difficultyColor(d);
-                              return GestureDetector(
-                                onTap: () => setDialogState(
-                                    () => selectedDifficulty = d),
-                                child: Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? color
-                                        : color.withOpacity(0.12),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      '$d',
-                                      style: TextStyle(
-                                        color: isSelected
-                                            ? Colors.white
-                                            : color,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }),
-                          ),
-                          const SizedBox(height: 4),
-                          Center(
-                            child: Text(
-                              difficultyLabel(selectedDifficulty),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade500,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          Row(
-                            children: [
-                              const Expanded(
-                                child: Text(
-                                  'Recurring Task',
-                                  style: TextStyle(fontSize: 15),
-                                ),
-                              ),
-                              Switch(
-                                value: isRecurring,
-                                onChanged: (v) =>
-                                    setDialogState(() => isRecurring = v),
-                              ),
-                            ],
-                          ),
-
-                          if (isRecurring) ...[
-                            const SizedBox(height: 8),
-                            DropdownButtonFormField<String>(
-                              value: recurrenceFrequency,
-                              decoration: const InputDecoration(
-                                labelText: 'Repeat',
-                                border: OutlineInputBorder(),
-                              ),
-                              items: frequencies
-                                  .map((f) => DropdownMenuItem(
-                                        value: f,
-                                        child: Text(f),
-                                      ))
-                                  .toList(),
-                              onChanged: (v) => setDialogState(
-                                  () => recurrenceFrequency = v ?? 'Weekly'),
-                            ),
-                          ],
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    final title = titleController.text.trim();
-
-                    if (title.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Task title is required')),
-                      );
-                      return;
-                    }
-                    if (selectedCategory == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Please select a category')),
-                      );
-                      return;
-                    }
-                    if (selectedDate == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Please select a due date')),
-                      );
-                      return;
-                    }
-                    if (selectedAssignee == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Please select an assignee')),
-                      );
-                      return;
-                    }
-
-                    final dueDateTime = selectedTime != null
-                        ? DateTime(
-                            selectedDate!.year,
-                            selectedDate!.month,
-                            selectedDate!.day,
-                            selectedTime!.hour,
-                            selectedTime!.minute,
-                          )
-                        : DateTime(
-                            selectedDate!.year,
-                            selectedDate!.month,
-                            selectedDate!.day,
-                          );
-
-                    final month =
-                        selectedDate!.month.toString().padLeft(2, '0');
-                    final day = selectedDate!.day.toString().padLeft(2, '0');
-                    final year = selectedDate!.year.toString();
-                    final dueLabel = selectedTime != null
-                        ? '$month/$day/$year • ${selectedTime!.format(context)}'
-                        : '$month/$day/$year';
-
-                    await FirestoreService().addTask(
-                      title: title,
-                      category: selectedCategory!,
-                      assignedTo: selectedAssignee!,
-                      householdId: householdId,
-                      dueLabel: dueLabel,
-                      dueDateTime: dueDateTime,
-                      difficulty: selectedDifficulty,
-                      isRecurring: isRecurring,
-                      recurrenceFrequency:
-                          isRecurring ? recurrenceFrequency : 'none',
-                    );
-
-                    if (dialogContext.mounted) {
-                      Navigator.of(dialogContext).pop();
-                    }
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Task added!')),
-                      );
-                    }
-                  },
-                  child: const Text('Add'),
-                ),
-              ],
-            );
-          },
-        );
-      },
     );
   }
 

@@ -14,8 +14,11 @@ class TaskFeedScreen extends StatefulWidget {
   State<TaskFeedScreen> createState() => _TaskFeedScreenState();
 }
 
+enum _StatusFilter { all, overdue, completed }
+
 class _TaskFeedScreenState extends State<TaskFeedScreen> {
   bool _showMyTasks = false;
+  _StatusFilter _statusFilter = _StatusFilter.all;
   String _userName = '';
   String _photoUrl = '';
 
@@ -73,23 +76,37 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                     horizontal: 24,
                     vertical: 16,
                   ),
-                  child: SegmentedButton<bool>(
-                    segments: const [
-                      ButtonSegment(
-                        value: false,
-                        label: Text('All Tasks'),
-                        icon: Icon(Icons.list_alt),
+                  child: Column(
+                    children: [
+                      SegmentedButton<bool>(
+                        segments: const [
+                          ButtonSegment(
+                            value: false,
+                            label: Text('All Tasks'),
+                            icon: Icon(Icons.list_alt),
+                          ),
+                          ButtonSegment(
+                            value: true,
+                            label: Text('My Tasks'),
+                            icon: Icon(Icons.person),
+                          ),
+                        ],
+                        selected: {_showMyTasks},
+                        onSelectionChanged: (selected) {
+                          setState(() => _showMyTasks = selected.first);
+                        },
                       ),
-                      ButtonSegment(
-                        value: true,
-                        label: Text('My Tasks'),
-                        icon: Icon(Icons.person),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          _filterChip('All', _StatusFilter.all, Colors.grey),
+                          const SizedBox(width: 8),
+                          _filterChip('Overdue', _StatusFilter.overdue, Colors.red),
+                          const SizedBox(width: 8),
+                          _filterChip('Completed', _StatusFilter.completed, Colors.green),
+                        ],
                       ),
                     ],
-                    selected: {_showMyTasks},
-                    onSelectionChanged: (selected) {
-                      setState(() => _showMyTasks = selected.first);
-                    },
                   ),
                 ),
 
@@ -115,6 +132,21 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                         docs = docs.where((d) {
                           final data = d.data() as Map<String, dynamic>;
                           return data['assignedTo'] == _userName;
+                        }).toList();
+                      }
+
+                      final now2 = DateTime.now();
+                      if (_statusFilter == _StatusFilter.overdue) {
+                        docs = docs.where((d) {
+                          final data = d.data() as Map<String, dynamic>;
+                          if (data['completed'] == true) return false;
+                          final dueTs = data['dueDateTime'] as Timestamp?;
+                          return dueTs != null && dueTs.toDate().isBefore(now2);
+                        }).toList();
+                      } else if (_statusFilter == _StatusFilter.completed) {
+                        docs = docs.where((d) {
+                          final data = d.data() as Map<String, dynamic>;
+                          return data['completed'] == true;
                         }).toList();
                       }
 
@@ -237,6 +269,33 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _filterChip(String label, _StatusFilter value, Color color) {
+    final selected = _statusFilter == value;
+    return GestureDetector(
+      onTap: () => setState(() => _statusFilter = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? color.withOpacity(0.15) : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? color : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? color : Colors.grey.shade600,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            fontSize: 13,
           ),
         ),
       ),

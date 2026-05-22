@@ -30,7 +30,7 @@ class FirestoreService {
     return _db
         .collection('activities')
         .where('householdId', isEqualTo: householdId)
-        .limit(10)
+        .limit(5)
         .snapshots();
   }
 
@@ -177,18 +177,23 @@ class FirestoreService {
   }) async {
     final code = _generateCode();
 
-  final doc = await _db.collection('households').add({
-    'name': name,
-    'code': code,
-    'createdBy': userId,
-    'ownerId': userId,
-    'createdAt': FieldValue.serverTimestamp(),
-  });
+    final doc = await _db.collection('households').add({
+      'name': name,
+      'code': code,
+      'createdBy': userId,
+      'ownerId': userId,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
 
-  await _db.collection('users').doc(userId).update({
-    'householdId': doc.id,
-    'role': 'owner',
-  });
+    final userDoc = await _db.collection('users').doc(userId).get();
+    final existingId = userDoc.data()?['householdId'] as String?;
+    final idsToAdd = [doc.id, if (existingId != null && existingId.isNotEmpty) existingId];
+
+    await _db.collection('users').doc(userId).set({
+      'householdId': doc.id,
+      'role': 'owner',
+      'householdIds': FieldValue.arrayUnion(idsToAdd),
+    }, SetOptions(merge: true));
 
     return code;
   }
@@ -207,10 +212,15 @@ class FirestoreService {
 
     final householdId = query.docs.first.id;
 
-    await _db.collection('users').doc(userId).update({
+    final userDoc = await _db.collection('users').doc(userId).get();
+    final existingId = userDoc.data()?['householdId'] as String?;
+    final idsToAdd = [householdId, if (existingId != null && existingId.isNotEmpty) existingId];
+
+    await _db.collection('users').doc(userId).set({
       'householdId': householdId,
       'role': 'member',
-    });
+      'householdIds': FieldValue.arrayUnion(idsToAdd),
+    }, SetOptions(merge: true));
 
     return true;
   }
@@ -322,10 +332,34 @@ class FirestoreService {
         .snapshots();
   }
 
-Future<void> leaveHousehold(String uid) async {
+Future<void> switchHousehold(String uid, String householdId) async {
   await _db.collection('users').doc(uid).update({
-    'householdId': FieldValue.delete(),
+    'householdId': householdId,
   });
+}
+
+Future<void> leaveHousehold(String uid, String householdId) async {
+  final doc = await _db.collection('users').doc(uid).get();
+  final data = doc.data() ?? {};
+  final rawIds = data['householdIds'];
+  final ids = (rawIds is List ? rawIds.cast<String>() : <String>[])
+      .where((id) => id != householdId)
+      .toList();
+
+  final updates = <String, dynamic>{
+    'householdIds': FieldValue.arrayRemove([householdId]),
+  };
+
+  final activeId = data['householdId'] as String? ?? '';
+  if (activeId == householdId) {
+    if (ids.isNotEmpty) {
+      updates['householdId'] = ids.first;
+    } else {
+      updates['householdId'] = FieldValue.delete();
+    }
+  }
+
+  await _db.collection('users').doc(uid).update(updates);
 }
 
 Future<void> kickMember(String uid) async {
@@ -333,6 +367,155 @@ Future<void> kickMember(String uid) async {
     'householdId': FieldValue.delete(),
     'role': FieldValue.delete(),
   });
+}
+
+Stream<QuerySnapshot> getCareNotes(String householdId) {
+  return _db
+      .collection('careNotes')
+      .where('householdId', isEqualTo: householdId)
+      .snapshots();
+}
+
+Future<void> addCareNote({
+  required String householdId,
+  required String title,
+  required String description,
+  required String category,
+  required String aboutName,
+  required String authorName,
+  String authorPhotoUrl = '',
+}) async {
+  await _db.collection('careNotes').add({
+    'householdId': householdId,
+    'title': title,
+    'description': description,
+    'category': category,
+    'aboutName': aboutName,
+    'authorName': authorName,
+    'authorPhotoUrl': authorPhotoUrl,
+    'createdAt': FieldValue.serverTimestamp(),
+  });
+}
+
+Future<void> deleteCareNote(String docId) async {
+  await _db.collection('careNotes').doc(docId).delete();
+}
+
+Future<String?> autoAssignTask({
+  required String householdId,
+  required int taskDifficulty,
+}) async {
+  final membersSnap = await _db
+      .collection('users')
+      .where('householdId', isEqualTo: householdId)
+      .get();
+
+  if (membersSnap.docs.isEmpty) return null;
+
+  final tasksSnap = await _db
+      .collection('tasks')
+      .where('householdId', isEqualTo: householdId)
+      .where('completed', isEqualTo: false)
+      .get();
+
+  final taskWeights = <String, double>{};
+  final now = DateTime.now();
+  for (final doc in tasksSnap.docs) {
+    final data = doc.data();
+    final name = data['assignedTo'] as String? ?? '';
+    if (name.isEmpty) continue;
+    final difficulty = (data['difficulty'] as int? ?? 1).clamp(1, 5);
+    final dueTs = data['dueDateTime'] as Timestamp?;
+    double urgency = 1.0;
+    if (dueTs != null) {
+      final daysUntilDue = dueTs.toDate().difference(now).inDays;
+      if (daysUntilDue <= 0) urgency = 2.0;
+      else if (daysUntilDue <= 3) urgency = 1.5;
+      else if (daysUntilDue <= 7) urgency = 1.25;
+    }
+    taskWeights[name] = (taskWeights[name] ?? 0) + difficulty * urgency;
+  }
+
+  final isHardTask = taskDifficulty >= 4;
+
+  var candidates = membersSnap.docs.map((doc) {
+    final data = doc.data();
+    final name = (data['name'] as String?)?.trim();
+    final email = data['email'] as String? ?? '';
+    final displayName = (name != null && name.isNotEmpty) ? name : email.split('@').first;
+    final workload = (data['workload'] as int?) ?? 3;
+    return {'name': displayName, 'workload': workload};
+  }).toList();
+
+  if (isHardTask) {
+    final filtered = candidates.where((m) => (m['workload'] as int) < 4).toList();
+    if (filtered.isNotEmpty) candidates = filtered;
+  }
+
+  String? bestName;
+  double bestScore = double.infinity;
+
+  for (final candidate in candidates) {
+    final name = candidate['name'] as String;
+    final workload = candidate['workload'] as int;
+    final weightedLoad = taskWeights[name] ?? 0.0;
+    final score = (weightedLoad + 1) * workload.toDouble();
+    if (score < bestScore) {
+      bestScore = score;
+      bestName = name;
+    }
+  }
+
+  return bestName;
+}
+
+Future<void> saveNotificationToken(String uid, String token) async {
+  await _db.collection('users').doc(uid).update({'fcmToken': token});
+}
+
+Future<void> renameUserInHouseholds({
+  required String uid,
+  required String oldName,
+  required String newName,
+}) async {
+  final userDoc = await _db.collection('users').doc(uid).get();
+  final data = userDoc.data() ?? {};
+  final rawIds = data['householdIds'];
+  final activeId = data['householdId'] as String? ?? '';
+  final List<String> householdIds = rawIds is List
+      ? List<String>.from(rawIds)
+      : (activeId.isNotEmpty ? [activeId] : []);
+
+  if (householdIds.isEmpty) return;
+
+  final batch = _db.batch();
+
+  for (final householdId in householdIds) {
+    final taskQuery = await _db
+        .collection('tasks')
+        .where('householdId', isEqualTo: householdId)
+        .where('assignedTo', isEqualTo: oldName)
+        .get();
+    for (final doc in taskQuery.docs) {
+      batch.update(doc.reference, {'assignedTo': newName});
+    }
+
+    final activityQuery = await _db
+        .collection('activities')
+        .where('householdId', isEqualTo: householdId)
+        .where('actorName', isEqualTo: oldName)
+        .get();
+    for (final doc in activityQuery.docs) {
+      final actData = doc.data();
+      final text = (actData['text'] as String? ?? '').replaceFirst(oldName, newName);
+      batch.update(doc.reference, {
+        'actorName': newName,
+        'text': text,
+      });
+    }
+  }
+
+  await batch.commit();
 }
 
 }

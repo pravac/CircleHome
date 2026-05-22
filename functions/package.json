@@ -1,0 +1,16 @@
+{
+  "name": "circlehome-functions",
+  "description": "Cloud Functions for CircleHome",
+  "scripts": {
+    "deploy": "firebase deploy --only functions"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "firebase-functions": "^4.9.0"
+  },
+  "private": true
+}

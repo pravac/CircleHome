@@ -15,6 +15,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _nameController = TextEditingController();
   String _photoUrl = '';
+  String _originalName = '';
   XFile? _pickedImage;
   int _workload = 3;
   bool _loading = true;
@@ -34,6 +35,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (data != null && mounted) {
       setState(() {
         _nameController.text = data['name'] as String? ?? '';
+        _originalName = data['name'] as String? ?? '';
         _photoUrl = data['photoUrl'] as String? ?? '';
         _workload = (data['workload'] as int?) ?? 3;
         _loading = false;
@@ -109,15 +111,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
       photoUrl = await ref.getDownloadURL();
     }
 
+    final newName = _nameController.text.trim();
+
     await FirestoreService().updateUserProfile(
       uid,
-      name: _nameController.text.trim(),
+      name: newName,
       workload: _workload,
       photoUrl: photoUrl,
     );
+
+    if (_originalName.isNotEmpty && newName != _originalName) {
+      await FirestoreService().renameUserInHouseholds(
+        uid: uid,
+        oldName: _originalName,
+        newName: newName,
+      );
+    }
+
     if (mounted) {
       setState(() {
         _saving = false;
+        _originalName = newName;
         if (photoUrl != null) _photoUrl = photoUrl;
         _pickedImage = null;
       });

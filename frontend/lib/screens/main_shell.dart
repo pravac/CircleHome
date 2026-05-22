@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'task_feed_screen.dart';
-import 'profile_screen.dart';
+import '../services/notification_service.dart';
+import 'care_screen.dart' show CareScreen, showAddCareNoteSheet;
+import 'leaderboard_screen.dart';
 import 'settings_screen.dart';
+import 'add_task_dialog.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -13,35 +16,96 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
-  String _householdId = '';
+  final _householdId = ValueNotifier<String>('');
 
-  List<Widget> get _screens => [
-    HomeScreen(onHouseholdLoaded: (id) {
-      if (_householdId != id) setState(() => _householdId = id);
-    }),
-    TaskFeedScreen(householdId: _householdId),
-    const CareNotesPlaceholder(),
-    const LeaderboardPlaceholder(),
-    const SettingsScreen(),
-  ];
+  late final List<Widget> _screens;
+
+  @override
+  void initState() {
+    super.initState();
+    NotificationService.initialize();
+    _screens = [
+      HomeScreen(onHouseholdLoaded: (id) {
+        _householdId.value = id;
+      }),
+      _HouseholdDependent(
+        notifier: _householdId,
+        builder: (id) => id.isEmpty
+            ? const _LoadingPlaceholder()
+            : TaskFeedScreen(householdId: id),
+      ),
+      _HouseholdDependent(
+        notifier: _householdId,
+        builder: (id) => CareScreen(householdId: id),
+      ),
+      _HouseholdDependent(
+        notifier: _householdId,
+        builder: (id) => LeaderboardScreen(householdId: id),
+      ),
+      const SettingsScreen(),
+    ];
+  }
+
+  @override
+  void dispose() {
+    _householdId.dispose();
+    super.dispose();
+  }
+
+  Widget? _buildFab() {
+    if (_selectedIndex == 1 && _householdId.value.isNotEmpty) {
+      return FloatingActionButton.extended(
+        onPressed: () => showAddTaskDialog(context, _householdId.value),
+        icon: const Icon(Icons.add),
+        label: const Text('Add Task'),
+        backgroundColor: const Color(0xFF5B8DEF),
+        foregroundColor: Colors.white,
+      );
+    }
+    if (_selectedIndex == 2 && _householdId.value.isNotEmpty) {
+      return FloatingActionButton.extended(
+        onPressed: () => showAddCareNoteSheet(context, _householdId.value),
+        icon: const Icon(Icons.add),
+        label: const Text('Add Note'),
+        backgroundColor: const Color(0xFF5B8DEF),
+        foregroundColor: Colors.white,
+      );
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width > 900;
 
     if (isWide) {
-      return Scaffold(
-        body: Row(
-          children: [
-            _buildSidebar(),
-            Expanded(child: _screens[_selectedIndex]),
-          ],
+      return ValueListenableBuilder<String>(
+        valueListenable: _householdId,
+        builder: (context, _, _) => Scaffold(
+          floatingActionButton: _buildFab(),
+          body: Row(
+            children: [
+              _buildSidebar(),
+              Expanded(
+                child: IndexedStack(
+                  index: _selectedIndex,
+                  children: _screens,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    return Scaffold(
-      body: _screens[_selectedIndex],
+    return ValueListenableBuilder<String>(
+      valueListenable: _householdId,
+      builder: (context, _, _) => Scaffold(
+      floatingActionButton: _buildFab(),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (i) => setState(() => _selectedIndex = i),
@@ -72,6 +136,7 @@ class _MainShellState extends State<MainShell> {
             label: 'Settings',
           ),
         ],
+      ),
       ),
     );
   }
@@ -123,49 +188,29 @@ class _MainShellState extends State<MainShell> {
   }
 }
 
-// Temporary placeholder screens
-class CareNotesPlaceholder extends StatelessWidget {
-  const CareNotesPlaceholder({super.key});
+class _HouseholdDependent extends StatelessWidget {
+  final ValueNotifier<String> notifier;
+  final Widget Function(String householdId) builder;
+
+  const _HouseholdDependent({required this.notifier, required this.builder});
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Color(0xFFF4F6FB),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.favorite, size: 64, color: Colors.pinkAccent),
-            SizedBox(height: 16),
-            Text('Care Notes', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            SizedBox(height: 8),
-            Text('Coming soon!', style: TextStyle(color: Colors.grey)),
-          ],
-        ),
-      ),
+    return ValueListenableBuilder<String>(
+      valueListenable: notifier,
+      builder: (context, id, _) => builder(id),
     );
   }
 }
 
-class LeaderboardPlaceholder extends StatelessWidget {
-  const LeaderboardPlaceholder({super.key});
+class _LoadingPlaceholder extends StatelessWidget {
+  const _LoadingPlaceholder();
 
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
       backgroundColor: Color(0xFFF4F6FB),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.leaderboard, size: 64, color: Colors.amber),
-            SizedBox(height: 16),
-            Text('Leaderboard', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            SizedBox(height: 8),
-            Text('Coming soon!', style: TextStyle(color: Colors.grey)),
-          ],
-        ),
-      ),
+      body: Center(child: CircularProgressIndicator()),
     );
   }
 }
