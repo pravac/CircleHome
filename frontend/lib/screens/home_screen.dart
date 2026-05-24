@@ -17,6 +17,7 @@ import 'household_switcher_sheet.dart';
 import 'package:flutter/services.dart';
 import 'add_task_dialog.dart';
 import 'care_screen.dart' show showAddCareNoteSheet;
+import '../theme.dart';
 
 class HomeScreen extends StatefulWidget {
   final void Function(String)? onHouseholdLoaded;
@@ -883,23 +884,7 @@ _MembersSection(
         dueTs != null &&
         dueTs.toDate().isBefore(DateTime.now());
 
-    Color categoryColor;
-    switch (category) {
-      case 'Cleaning':
-        categoryColor = Colors.blue;
-        break;
-      case 'Groceries':
-        categoryColor = Colors.green;
-        break;
-      case 'Laundry':
-        categoryColor = Colors.orange;
-        break;
-      case 'Bills':
-        categoryColor = Colors.red;
-        break;
-      default:
-        categoryColor = Colors.grey;
-    }
+    final categoryColor = AppColors.category(category);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1007,7 +992,7 @@ _MembersSection(
                     ),
                     if (difficulty > 0) ...[
                       const SizedBox(width: 4),
-                      _difficultyBadge(difficulty),
+                      DifficultyBadge(difficulty),
                     ],
                   ],
                 ),
@@ -1022,7 +1007,7 @@ _MembersSection(
                         recurrenceFrequency.isNotEmpty &&
                         recurrenceFrequency != 'none') ...[
                       const SizedBox(width: 8),
-                      _recurringBadge(recurrenceFrequency),
+                      RecurringBadge(recurrenceFrequency),
                     ],
                   ],
                 ),
@@ -1337,56 +1322,6 @@ _MembersSection(
     );
   }
 
-  Widget _difficultyBadge(int difficulty) {
-    const colors = [
-      Colors.green,
-      Color(0xFF8BC34A),
-      Colors.orange,
-      Colors.deepOrange,
-      Colors.red,
-    ];
-    final color = colors[(difficulty - 1).clamp(0, 4)];
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        '★$difficulty',
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _recurringBadge(String frequency) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: Colors.purple.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.repeat, size: 11, color: Colors.purple),
-          const SizedBox(width: 3),
-          Text(
-            frequency,
-            style: const TextStyle(
-              color: Colors.purple,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _SummaryCard extends StatelessWidget {

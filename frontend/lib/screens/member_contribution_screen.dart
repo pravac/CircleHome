@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
+import '../theme.dart';
 
 class MemberContributionScreen extends StatelessWidget {
   final String memberName;
@@ -18,13 +19,7 @@ class MemberContributionScreen extends StatelessWidget {
     required this.rank,
   });
 
-  static const _rankColors = {
-    1: Color(0xFFFFD700),
-    2: Color(0xFFC0C0C0),
-    3: Color(0xFFCD7F32),
-  };
-
-  Color get _rankColor => _rankColors[rank] ?? const Color(0xFF5B8DEF);
+  Color get _rankColor => AppColors.medal(rank);
 
   String get _rankLabel {
     if (rank == 1) return '🥇 1st Place';
@@ -311,20 +306,6 @@ class _TaskRow extends StatelessWidget {
 
   const _TaskRow({required this.data, required this.isCompleted});
 
-  static const _categoryColors = {
-    'Cleaning': Colors.blue,
-    'Groceries': Colors.green,
-    'Laundry': Colors.orange,
-    'Bills': Colors.red,
-  };
-
-  static const _difficultyColors = [
-    Colors.green,
-    Color(0xFF8BC34A),
-    Colors.orange,
-    Colors.deepOrange,
-    Colors.red,
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -332,7 +313,7 @@ class _TaskRow extends StatelessWidget {
     final category = data['category'] as String? ?? 'Other';
     final dueLabel = data['dueLabel'] as String? ?? '';
     final difficulty = (data['difficulty'] as int? ?? 0).clamp(0, 5);
-    final categoryColor = _categoryColors[category] ?? Colors.grey;
+    final categoryColor = AppColors.category(category);
 
     final dueTs = data['dueDateTime'] as Timestamp?;
     final isOverdue = !isCompleted &&
@@ -390,22 +371,7 @@ class _TaskRow extends StatelessWidget {
                     ),
                     if (difficulty > 0) ...[
                       const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: _difficultyColors[(difficulty - 1).clamp(0, 4)]
-                              .withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '★$difficulty',
-                          style: TextStyle(
-                            color: _difficultyColors[(difficulty - 1).clamp(0, 4)],
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
+                      DifficultyBadge(difficulty, dimmed: isCompleted),
                     ],
                   ],
                 ),

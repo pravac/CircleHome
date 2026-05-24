@@ -7,7 +7,7 @@ class FirestoreService {
   Stream<QuerySnapshot> getHouseholdMembers(String householdId) {
     return _db
         .collection('users')
-        .where('householdId', isEqualTo: householdId)
+        .where('householdIds', arrayContains: householdId)
         .snapshots();
   }
 
@@ -471,6 +471,10 @@ Future<String?> autoAssignTask({
 
 Future<void> saveNotificationToken(String uid, String token) async {
   await _db.collection('users').doc(uid).update({'fcmToken': token});
+}
+
+Future<void> clearNotificationToken(String uid) async {
+  await _db.collection('users').doc(uid).update({'fcmToken': FieldValue.delete()});
 }
 
 Future<void> renameUserInHouseholds({

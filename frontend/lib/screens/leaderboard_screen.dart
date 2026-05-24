@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
+import '../theme.dart';
 import 'member_contribution_screen.dart';
 
 class LeaderboardScreen extends StatelessWidget {
@@ -260,12 +261,6 @@ class _PodiumSlot extends StatelessWidget {
     required this.height,
   });
 
-  static const _medals = {
-    1: Color(0xFFFFD700),
-    2: Color(0xFFC0C0C0),
-    3: Color(0xFFCD7F32),
-  };
-
   static const _icons = {
     1: '🥇',
     2: '🥈',
@@ -274,7 +269,7 @@ class _PodiumSlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _medals[rank]!;
+    final color = AppColors.medal(rank);
     final initials = name
         .split(' ')
         .where((e) => e.isNotEmpty)
@@ -366,16 +361,7 @@ class _RankRow extends StatelessWidget {
         .join()
         .toUpperCase();
 
-    final Color rankColor;
-    if (rank == 1) {
-      rankColor = const Color(0xFFFFD700);
-    } else if (rank == 2) {
-      rankColor = const Color(0xFFC0C0C0);
-    } else if (rank == 3) {
-      rankColor = const Color(0xFFCD7F32);
-    } else {
-      rankColor = Colors.grey.shade400;
-    }
+    final rankColor = rank <= 3 ? AppColors.medal(rank) : Colors.grey.shade400;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),

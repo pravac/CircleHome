@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
+import '../theme.dart';
 
 const _categories = ['General', 'Medication', 'Appointment', 'Emergency'];
 
@@ -177,7 +178,7 @@ Future<void> _showCareNoteBottomSheet(
                                 if (sheetCtx.mounted) Navigator.of(sheetCtx).pop();
                               },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF5B8DEF),
+                          backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -240,7 +241,7 @@ class _CareScreenState extends State<CareScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -300,7 +301,7 @@ class _CareScreenState extends State<CareScreen> {
                       icon: const Icon(Icons.add),
                       label: const Text('Add First Note'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF5B8DEF),
+                        backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
@@ -424,7 +425,7 @@ class _CareScreenState extends State<CareScreen> {
                           radius: 12,
                           backgroundImage:
                               authorPhoto.isNotEmpty ? NetworkImage(authorPhoto) : null,
-                          backgroundColor: const Color(0xFF5B8DEF).withValues(alpha: 0.15),
+                          backgroundColor: AppColors.primary.withValues(alpha: 0.15),
                           child: authorPhoto.isEmpty
                               ? Text(
                                   authorName.isNotEmpty ? authorName[0].toUpperCase() : '?',

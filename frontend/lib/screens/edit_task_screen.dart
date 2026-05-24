@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
+import '../theme.dart';
 
 class EditTaskScreen extends StatefulWidget {
   final String docId;
@@ -66,16 +67,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     super.dispose();
   }
 
-  Color _difficultyColor(int d) {
-    const colors = [
-      Colors.green,
-      Color(0xFF8BC34A),
-      Colors.orange,
-      Colors.deepOrange,
-      Colors.red,
-    ];
-    return colors[(d - 1).clamp(0, 4)];
-  }
+  Color _difficultyColor(int d) => AppColors.difficulty(d);
 
   String _difficultyLabel(int d) {
     const labels = ['Very Easy', 'Easy', 'Moderate', 'Hard', 'Very Hard'];

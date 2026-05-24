@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
+import '../theme.dart';
 
 Future<void> showAddTaskDialog(
   BuildContext context,
@@ -21,14 +22,6 @@ Future<void> showAddTaskDialog(
     'Daily', 'Every Other Day', 'Weekly', 'Biweekly',
     'Monthly', 'Every 3 Months', 'Yearly',
   ];
-
-  Color difficultyColor(int d) {
-    const colors = [
-      Colors.green, Color(0xFF8BC34A), Colors.orange,
-      Colors.deepOrange, Colors.red,
-    ];
-    return colors[(d - 1).clamp(0, 4)];
-  }
 
   String difficultyLabel(int d) {
     switch (d) {
@@ -177,7 +170,7 @@ Future<void> showAddTaskDialog(
                           children: List.generate(5, (i) {
                             final d = i + 1;
                             final isSelected = selectedDifficulty == d;
-                            final color = difficultyColor(d);
+                            final color = AppColors.difficulty(d);
                             return GestureDetector(
                               onTap: () => setDialogState(() => selectedDifficulty = d),
                               child: Container(

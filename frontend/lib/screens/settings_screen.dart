@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
@@ -18,11 +19,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _photoUrl = '';
   String _householdId = '';
   bool _loading = true;
+  AuthorizationStatus? _notifStatus;
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
+    _loadNotifStatus();
+  }
+
+  Future<void> _loadNotifStatus() async {
+    final settings = await FirebaseMessaging.instance.getNotificationSettings();
+    if (mounted) {
+      setState(() => _notifStatus = settings.authorizationStatus);
+    }
   }
 
   Future<void> _loadProfile() async {
@@ -295,11 +305,14 @@ Future<void> _confirmLeaveHousehold() async {
                             _settingsRow(
                               icon: Icons.notifications_outlined,
                               label: 'Notifications',
-                              trailing: const Text(
-                                'Coming soon',
-                                style:
-                                    TextStyle(color: Colors.grey, fontSize: 13),
-                              ),
+                              trailing: _notifStatus == AuthorizationStatus.authorized
+                                  ? const Row(mainAxisSize: MainAxisSize.min, children: [
+                                      Icon(Icons.check_circle, color: Colors.green, size: 16),
+                                      SizedBox(width: 4),
+                                      Text('Enabled', style: TextStyle(color: Colors.green, fontSize: 13)),
+                                    ])
+                                  : const Text('Manage in device settings',
+                                      style: TextStyle(color: Colors.grey, fontSize: 12)),
                               onTap: null,
                             ),
                             Divider(

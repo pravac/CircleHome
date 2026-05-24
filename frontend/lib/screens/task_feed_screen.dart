@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
+import '../theme.dart';
 import 'swap_sheet.dart';
 import 'edit_task_screen.dart';
 
@@ -48,21 +49,14 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        automaticallyImplyLeading: Navigator.canPop(context),
         title: Text(
           _showMyTasks ? 'My Tasks' : 'All Tasks',
-          style: const TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-          ),
+          style: AppTextStyles.appBarTitle,
         ),
       ),
       body: SafeArea(
@@ -341,23 +335,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
         dueTs != null &&
         dueTs.toDate().isBefore(DateTime.now());
 
-    Color categoryColor;
-    switch (category) {
-      case 'Cleaning':
-        categoryColor = Colors.blue;
-        break;
-      case 'Groceries':
-        categoryColor = Colors.green;
-        break;
-      case 'Laundry':
-        categoryColor = Colors.orange;
-        break;
-      case 'Bills':
-        categoryColor = Colors.red;
-        break;
-      default:
-        categoryColor = Colors.grey;
-    }
+    final categoryColor = AppColors.category(category);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -485,7 +463,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                     ),
                     if (difficulty > 0) ...[
                       const SizedBox(width: 4),
-                      _difficultyBadge(difficulty, dimmed: completed),
+                      DifficultyBadge(difficulty, dimmed: completed),
                     ],
                   ],
                 ),
@@ -506,7 +484,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                         recurrenceFrequency != 'none' &&
                         !completed) ...[
                       const SizedBox(width: 6),
-                      _recurringBadge(recurrenceFrequency),
+                      RecurringBadge(recurrenceFrequency),
                     ],
                   ],
                 ),
@@ -597,54 +575,4 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
     );
   }
 
-  Widget _difficultyBadge(int difficulty, {bool dimmed = false}) {
-    const colors = [
-      Colors.green,
-      Color(0xFF8BC34A),
-      Colors.orange,
-      Colors.deepOrange,
-      Colors.red,
-    ];
-    final color = dimmed ? Colors.grey : colors[(difficulty - 1).clamp(0, 4)];
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        '★$difficulty',
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _recurringBadge(String frequency) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: Colors.purple.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.repeat, size: 11, color: Colors.purple),
-          const SizedBox(width: 3),
-          Text(
-            frequency,
-            style: const TextStyle(
-              color: Colors.purple,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
