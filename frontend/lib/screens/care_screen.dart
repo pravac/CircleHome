@@ -19,29 +19,13 @@ const _categoryIcons = {
   'Emergency': Icons.emergency_outlined,
 };
 
-Future<void> showAddCareNoteSheet(BuildContext context, String householdId) async {
-  final uid = FirebaseAuth.instance.currentUser?.uid;
-  String userName = '';
-  String photoUrl = '';
-  if (uid != null) {
-    final doc = await FirestoreService().getUserDocument(uid);
-    final data = doc.data();
-    if (data != null) {
-      final name = data['name'] as String?;
-      final email = FirebaseAuth.instance.currentUser?.email ?? '';
-      userName = (name != null && name.isNotEmpty) ? name : email.split('@').first;
-      photoUrl = data['photoUrl'] as String? ?? '';
-    }
-  }
-  if (!context.mounted) return;
-  await _showCareNoteBottomSheet(context, householdId, userName, photoUrl);
+Future<void> showAddCareNoteSheet(BuildContext context, String householdId) {
+  return _showCareNoteBottomSheet(context, householdId);
 }
 
 Future<void> _showCareNoteBottomSheet(
   BuildContext context,
   String householdId,
-  String userName,
-  String photoUrl,
 ) async {
   final titleController = TextEditingController();
   final descController = TextEditingController();
@@ -158,12 +142,29 @@ Future<void> _showCareNoteBottomSheet(
                             : () async {
                                 final title = titleController.text.trim();
                                 if (title.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  ScaffoldMessenger.of(ctx).showSnackBar(
                                     const SnackBar(content: Text('Title is required')),
                                   );
                                   return;
                                 }
                                 setSheetState(() => saving = true);
+
+                                final uid = FirebaseAuth.instance.currentUser?.uid;
+                                String userName = '';
+                                String photoUrl = '';
+                                if (uid != null) {
+                                  final doc = await FirestoreService().getUserDocument(uid);
+                                  final data = doc.data();
+                                  if (data != null) {
+                                    final name = data['name'] as String?;
+                                    final email = FirebaseAuth.instance.currentUser?.email ?? '';
+                                    userName = (name != null && name.isNotEmpty)
+                                        ? name
+                                        : email.split('@').first;
+                                    photoUrl = data['photoUrl'] as String? ?? '';
+                                  }
+                                }
+
                                 await FirestoreService().addCareNote(
                                   householdId: householdId,
                                   title: title,

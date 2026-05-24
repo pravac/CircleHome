@@ -14,6 +14,7 @@ Future<void> showAddTaskDialog(
   int selectedDifficulty = 3;
   bool isRecurring = false;
   String recurrenceFrequency = 'Weekly';
+  List<String> memberNames = [];
 
   const categories = ['Cleaning', 'Groceries', 'Laundry', 'Bills', 'Other'];
   const frequencies = [
@@ -71,7 +72,7 @@ Future<void> showAddTaskDialog(
                 stream: FirestoreService().getHouseholdMembers(householdId),
                 builder: (context, snapshot) {
                   final memberDocs = snapshot.data?.docs ?? [];
-                  final memberNames = memberDocs.map((doc) {
+                  memberNames = memberDocs.map((doc) {
                     final data = doc.data() as Map<String, dynamic>;
                     final name = (data['name'] as String?)?.trim();
                     final email = (data['email'] as String?)?.trim();
@@ -148,6 +149,16 @@ Future<void> showAddTaskDialog(
                                   Icon(Icons.auto_awesome, size: 16, color: Color(0xFF5B8DEF)),
                                   SizedBox(width: 8),
                                   Text('Auto-assign'),
+                                ],
+                              ),
+                            ),
+                            const DropdownMenuItem(
+                              value: '__all__',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.group, size: 16, color: Color(0xFF43A047)),
+                                  SizedBox(width: 8),
+                                  Text('Assign to All'),
                                 ],
                               ),
                             ),
@@ -263,23 +274,6 @@ Future<void> showAddTaskDialog(
                     return;
                   }
 
-                  String resolvedAssignee = selectedAssignee!;
-                  if (selectedAssignee == '__auto__') {
-                    final assigned = await FirestoreService().autoAssignTask(
-                      householdId: householdId,
-                      taskDifficulty: selectedDifficulty,
-                    );
-                    if (assigned == null) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Could not auto-assign: no members found')),
-                        );
-                      }
-                      return;
-                    }
-                    resolvedAssignee = assigned;
-                  }
-
                   final dueDateTime = selectedTime != null
                       ? DateTime(selectedDate!.year, selectedDate!.month, selectedDate!.day,
                           selectedTime!.hour, selectedTime!.minute)
@@ -292,22 +286,65 @@ Future<void> showAddTaskDialog(
                       ? '$month/$day/$year • ${selectedTime!.format(context)}'
                       : '$month/$day/$year';
 
-                  await FirestoreService().addTask(
-                    title: title,
-                    category: selectedCategory!,
-                    assignedTo: resolvedAssignee,
-                    householdId: householdId,
-                    dueLabel: dueLabel,
-                    dueDateTime: dueDateTime,
-                    difficulty: selectedDifficulty,
-                    isRecurring: isRecurring,
-                    recurrenceFrequency: isRecurring ? recurrenceFrequency : 'none',
-                  );
+                  if (selectedAssignee == '__all__') {
+                    if (memberNames.isEmpty) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('No members found in household')),
+                        );
+                      }
+                      return;
+                    }
+                    for (final member in memberNames) {
+                      await FirestoreService().addTask(
+                        title: title,
+                        category: selectedCategory!,
+                        assignedTo: member,
+                        householdId: householdId,
+                        dueLabel: dueLabel,
+                        dueDateTime: dueDateTime,
+                        difficulty: selectedDifficulty,
+                        isRecurring: isRecurring,
+                        recurrenceFrequency: isRecurring ? recurrenceFrequency : 'none',
+                      );
+                    }
+                  } else {
+                    String resolvedAssignee = selectedAssignee!;
+                    if (selectedAssignee == '__auto__') {
+                      final assigned = await FirestoreService().autoAssignTask(
+                        householdId: householdId,
+                        taskDifficulty: selectedDifficulty,
+                      );
+                      if (assigned == null) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Could not auto-assign: no members found')),
+                          );
+                        }
+                        return;
+                      }
+                      resolvedAssignee = assigned;
+                    }
+                    await FirestoreService().addTask(
+                      title: title,
+                      category: selectedCategory!,
+                      assignedTo: resolvedAssignee,
+                      householdId: householdId,
+                      dueLabel: dueLabel,
+                      dueDateTime: dueDateTime,
+                      difficulty: selectedDifficulty,
+                      isRecurring: isRecurring,
+                      recurrenceFrequency: isRecurring ? recurrenceFrequency : 'none',
+                    );
+                  }
 
                   if (dialogContext.mounted) Navigator.of(dialogContext).pop();
                   if (context.mounted) {
+                    final msg = selectedAssignee == '__all__'
+                        ? 'Task assigned to all ${memberNames.length} members!'
+                        : 'Task added!';
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Task added!')),
+                      SnackBar(content: Text(msg)),
                     );
                   }
                 },

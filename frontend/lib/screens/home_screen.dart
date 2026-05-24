@@ -16,6 +16,7 @@ import 'edit_task_screen.dart';
 import 'household_switcher_sheet.dart';
 import 'package:flutter/services.dart';
 import 'add_task_dialog.dart';
+import 'care_screen.dart' show showAddCareNoteSheet;
 
 class HomeScreen extends StatefulWidget {
   final void Function(String)? onHouseholdLoaded;
@@ -1321,7 +1322,7 @@ _MembersSection(
         const SizedBox(width: 14),
         Expanded(
           child: ElevatedButton(
-            onPressed: () {},
+            onPressed: () => showAddCareNoteSheet(context, householdId),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
               shape: RoundedRectangleBorder(

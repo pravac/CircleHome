@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
+import 'member_contribution_screen.dart';
 
 class LeaderboardScreen extends StatelessWidget {
   final String householdId;
@@ -147,12 +148,26 @@ class LeaderboardScreen extends StatelessWidget {
                           final pts = entry.value.value;
                           final count = taskCounts[name] ?? 0;
                           final photo = memberMeta[name]?['photoUrl'] ?? '';
-                          return _RankRow(
-                            rank: rank,
-                            name: name,
-                            photoUrl: photo,
-                            points: pts,
-                            taskCount: count,
+                          return GestureDetector(
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => MemberContributionScreen(
+                                  memberName: name,
+                                  photoUrl: photo,
+                                  householdId: householdId,
+                                  totalPoints: pts,
+                                  rank: rank,
+                                ),
+                              ),
+                            ),
+                            child: _RankRow(
+                              rank: rank,
+                              name: name,
+                              photoUrl: photo,
+                              points: pts,
+                              taskCount: count,
+                            ),
                           );
                         }),
                       ],
