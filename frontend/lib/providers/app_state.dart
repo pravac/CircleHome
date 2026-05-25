@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
 
 class AppState extends ChangeNotifier {
-  final FirestoreService _firestoreService = FirestoreService();
+  final FirestoreService _firestoreService;
+
+  AppState({FirestoreService? firestoreService})
+      : _firestoreService = firestoreService ?? FirestoreService();
 
   User? firebaseUser;
   Map<String, dynamic>? userData;

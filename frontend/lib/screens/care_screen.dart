@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
 import '../theme.dart';
+import '../utils/time_utils.dart';
 
 const _categories = ['General', 'Medication', 'Appointment', 'Emergency'];
 
@@ -218,13 +219,7 @@ class CareScreen extends StatefulWidget {
 class _CareScreenState extends State<CareScreen> {
   String _formatTime(Timestamp? ts) {
     if (ts == null) return '';
-    final dt = ts.toDate();
-    final diff = DateTime.now().difference(dt);
-    if (diff.inSeconds < 60) return '${diff.inSeconds}s ago';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-    return '${(diff.inDays / 7).floor()}w ago';
+    return formatRelativeTime(ts.toDate());
   }
 
   void _showAddSheet() {
