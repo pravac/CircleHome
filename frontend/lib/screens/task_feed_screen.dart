@@ -277,7 +277,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? color.withOpacity(0.15) : Colors.grey.shade100,
+          color: selected ? color.withValues(alpha: 0.15) : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: selected ? color : Colors.transparent,
@@ -449,7 +449,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                       decoration: BoxDecoration(
                         color: completed
                             ? Colors.grey.shade100
-                            : categoryColor.withOpacity(0.15),
+                            : categoryColor.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -515,7 +515,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.12),
+                    color: Colors.green.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Text(

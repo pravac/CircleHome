@@ -198,7 +198,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
+                    color: Colors.black.withValues(alpha: 0.06),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -208,7 +208,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               child: Image.asset(
                 'lib/assets/images/CircleHomeLogo.png',
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) {
+                errorBuilder: (_, _, _) {
                   return const Icon(
                     Icons.home_rounded,
                     size: 38,
@@ -241,7 +241,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.07),
+            color: Colors.black.withValues(alpha: 0.07),
             blurRadius: 24,
             offset: const Offset(0, 10),
           ),

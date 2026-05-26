@@ -289,7 +289,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                            color: isSelected ? color : color.withOpacity(0.12),
+                            color: isSelected ? color : color.withValues(alpha: 0.12),
                             shape: BoxShape.circle,
                           ),
                           child: Center(

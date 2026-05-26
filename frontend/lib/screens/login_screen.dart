@@ -213,7 +213,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
+                    color: Colors.black.withValues(alpha: 0.06),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -227,7 +227,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 fit: BoxFit.contain,
                 filterQuality: FilterQuality.high,
                 isAntiAlias: true,
-                errorBuilder: (_, __, ___) {
+                errorBuilder: (_, _, _) {
                   return const Icon(
                     Icons.home_rounded,
                     size: 38,
@@ -260,7 +260,7 @@ class _LoginScreenState extends State<LoginScreen> {
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.07),
+            color: Colors.black.withValues(alpha: 0.07),
             blurRadius: 24,
             offset: const Offset(0, 10),
           ),

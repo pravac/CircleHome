@@ -432,9 +432,9 @@ Future<String?> autoAssignTask({
     double urgency = 1.0;
     if (dueTs != null) {
       final daysUntilDue = dueTs.toDate().difference(now).inDays;
-      if (daysUntilDue <= 0) urgency = 2.0;
-      else if (daysUntilDue <= 3) urgency = 1.5;
-      else if (daysUntilDue <= 7) urgency = 1.25;
+      if (daysUntilDue <= 0) { urgency = 2.0; }
+      else if (daysUntilDue <= 3) { urgency = 1.5; }
+      else if (daysUntilDue <= 7) { urgency = 1.25; }
     }
     taskWeights[name] = (taskWeights[name] ?? 0) + difficulty * urgency;
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme.dart';
 import 'home_screen.dart';
 import 'task_feed_screen.dart';
 import '../services/notification_service.dart';
@@ -150,35 +151,35 @@ class _MainShellState extends State<MainShell> {
         children: [
           IconButton(
             icon: Icon(Icons.home,
-                color: _selectedIndex == 0 ? Colors.blue : Colors.grey),
+                color: _selectedIndex == 0 ? AppColors.primary : Colors.grey),
             tooltip: 'Home',
             onPressed: () => setState(() => _selectedIndex = 0),
           ),
           const SizedBox(height: 20),
           IconButton(
             icon: Icon(Icons.checklist,
-                color: _selectedIndex == 1 ? Colors.blue : Colors.grey),
+                color: _selectedIndex == 1 ? AppColors.primary : Colors.grey),
             tooltip: 'Tasks',
             onPressed: () => setState(() => _selectedIndex = 1),
           ),
           const SizedBox(height: 20),
           IconButton(
             icon: Icon(Icons.favorite,
-                color: _selectedIndex == 2 ? Colors.blue : Colors.grey),
+                color: _selectedIndex == 2 ? AppColors.primary : Colors.grey),
             tooltip: 'Care Notes',
             onPressed: () => setState(() => _selectedIndex = 2),
           ),
           const SizedBox(height: 20),
           IconButton(
             icon: Icon(Icons.leaderboard,
-                color: _selectedIndex == 3 ? Colors.blue : Colors.grey),
+                color: _selectedIndex == 3 ? AppColors.primary : Colors.grey),
             tooltip: 'Leaderboard',
             onPressed: () => setState(() => _selectedIndex = 3),
           ),
           const SizedBox(height: 20),
           IconButton(
             icon: Icon(Icons.settings_outlined,
-                color: _selectedIndex == 4 ? Colors.blue : Colors.grey),
+                color: _selectedIndex == 4 ? AppColors.primary : Colors.grey),
             tooltip: 'Settings',
             onPressed: () => setState(() => _selectedIndex = 4),
           ),

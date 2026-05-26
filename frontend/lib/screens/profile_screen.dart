@@ -240,10 +240,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             CircleAvatar(
                               radius: 52,
                               backgroundColor:
-                                  const Color(0xFF5B8DEF).withOpacity(0.15),
+                                  const Color(0xFF5B8DEF).withValues(alpha: 0.15),
                               backgroundImage: avatarImage,
                               onBackgroundImageError:
-                                  avatarImage != null ? (_, __) {} : null,
+                                  avatarImage != null ? (_, _) {} : null,
                               child: avatarImage == null
                                   ? Text(
                                       initials,
@@ -375,7 +375,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                   decoration: BoxDecoration(
                                     color: _workloadColor(_workload)
-                                        .withOpacity(0.15),
+                                        .withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
@@ -403,7 +403,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 activeTrackColor: _workloadColor(_workload),
                                 thumbColor: _workloadColor(_workload),
                                 overlayColor:
-                                    _workloadColor(_workload).withOpacity(0.15),
+                                    _workloadColor(_workload).withValues(alpha: 0.15),
                                 inactiveTrackColor: Colors.grey.shade200,
                               ),
                               child: Slider(

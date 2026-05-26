@@ -162,7 +162,7 @@ Future<void> _confirmLeaveHousehold() async {
                             CircleAvatar(
                               radius: 30,
                               backgroundColor:
-                                  const Color(0xFF5B8DEF).withOpacity(0.15),
+                                  const Color(0xFF5B8DEF).withValues(alpha: 0.15),
                               backgroundImage: avatarImage,
                               onBackgroundImageError:
                                   avatarImage != null ? (e, s) {} : null,
