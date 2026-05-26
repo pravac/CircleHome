@@ -159,7 +159,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Edit Task'),
         backgroundColor: Colors.white,
@@ -171,7 +171,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
             child: const Text(
               'Save',
               style: TextStyle(
-                color: Color(0xFF5B8DEF),
+                color: AppColors.primary,
                 fontWeight: FontWeight.w600,
                 fontSize: 16,
               ),
@@ -349,7 +349,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                   child: ElevatedButton(
                     onPressed: _saving ? null : _save,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF5B8DEF),
+                      backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(

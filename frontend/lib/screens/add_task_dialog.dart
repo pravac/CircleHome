@@ -140,7 +140,7 @@ Future<void> showAddTaskDialog(
                               value: '__auto__',
                               child: Row(
                                 children: [
-                                  Icon(Icons.auto_awesome, size: 16, color: Color(0xFF5B8DEF)),
+                                  Icon(Icons.auto_awesome, size: 16, color: AppColors.primary),
                                   SizedBox(width: 8),
                                   Text('Auto-assign'),
                                 ],

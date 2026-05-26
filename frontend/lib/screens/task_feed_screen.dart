@@ -549,7 +549,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
             ),
           if (!completed)
             IconButton(
-              icon: const Icon(Icons.swap_horiz, color: Color(0xFF5B8DEF)),
+              icon: const Icon(Icons.swap_horiz, color: AppColors.primary),
               tooltip: 'Swap or Reassign',
               onPressed: () {
                 final uid =

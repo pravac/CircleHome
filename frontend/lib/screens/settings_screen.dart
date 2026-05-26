@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import '../theme.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import 'profile_screen.dart';
@@ -124,7 +125,7 @@ Future<void> _confirmLeaveHousehold() async {
         _photoUrl.isNotEmpty ? NetworkImage(_photoUrl) : null;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -162,7 +163,7 @@ Future<void> _confirmLeaveHousehold() async {
                             CircleAvatar(
                               radius: 30,
                               backgroundColor:
-                                  const Color(0xFF5B8DEF).withValues(alpha: 0.15),
+                                  AppColors.primary.withValues(alpha: 0.15),
                               backgroundImage: avatarImage,
                               onBackgroundImageError:
                                   avatarImage != null ? (e, s) {} : null,
@@ -172,7 +173,7 @@ Future<void> _confirmLeaveHousehold() async {
                                       style: const TextStyle(
                                         fontSize: 20,
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xFF5B8DEF),
+                                        color: AppColors.primary,
                                       ),
                                     )
                                   : null,
@@ -202,7 +203,7 @@ Future<void> _confirmLeaveHousehold() async {
                             ),
                             IconButton(
                               icon: const Icon(Icons.edit_outlined,
-                                  color: Color(0xFF5B8DEF)),
+                                  color: AppColors.primary),
                               tooltip: 'Edit Profile',
                               onPressed: () async {
                                 await Navigator.push(

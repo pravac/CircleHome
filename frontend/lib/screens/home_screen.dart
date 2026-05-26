@@ -16,6 +16,7 @@ import 'package:flutter/services.dart';
 import 'add_task_dialog.dart';
 import 'care_screen.dart' show showAddCareNoteSheet;
 import '../theme.dart';
+import '../utils/time_utils.dart';
 
 class HomeScreen extends StatefulWidget {
   final void Function(String)? onHouseholdLoaded;
@@ -33,15 +34,6 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (_) => TaskFeedScreen(householdId: householdId),
       ),
     );
-  }
-
-  String _formatRelativeTime(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inSeconds < 60) return '${diff.inSeconds}s ago';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-    return '${(diff.inDays / 7).floor()}w ago';
   }
 
   @override
@@ -78,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
         });
 
         return Scaffold(
-          backgroundColor: const Color(0xFFF4F6FB),
+          backgroundColor: AppColors.background,
           body: SafeArea(
             child: Stack(
               children: [
@@ -127,7 +119,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
 Widget _buildNoHouseholdScreen(BuildContext context) {
   return Scaffold(
-    backgroundColor: const Color(0xFFF4F6FB),
+    backgroundColor: AppColors.background,
     body: Center(
       child: Container(
         width: 520,
@@ -274,10 +266,10 @@ Widget _buildNoHouseholdScreen(BuildContext context) {
     ] else ...[
       CircleAvatar(
         radius: 22,
-        backgroundColor: const Color(0xFF5B8DEF).withValues(alpha: 0.15),
+        backgroundColor: AppColors.primary.withValues(alpha: 0.15),
         child: const Icon(
           Icons.home_outlined,
-          color: Color(0xFF5B8DEF),
+          color: AppColors.primary,
           size: 22,
         ),
       ),
@@ -397,13 +389,13 @@ _MembersSection(
                           CircleAvatar(
                             radius: 44,
                             backgroundColor:
-                                const Color(0xFF5B8DEF).withValues(alpha: 0.15),
+                                AppColors.primary.withValues(alpha: 0.15),
                             backgroundImage: imageProvider,
                             child: imageProvider == null
                                 ? const Icon(
                                     Icons.home_outlined,
                                     size: 40,
-                                    color: Color(0xFF5B8DEF),
+                                    color: AppColors.primary,
                                   )
                                 : null,
                           ),
@@ -413,7 +405,7 @@ _MembersSection(
                             child: Container(
                               padding: const EdgeInsets.all(4),
                               decoration: const BoxDecoration(
-                                color: Color(0xFF5B8DEF),
+                                color: AppColors.primary,
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(
@@ -842,7 +834,7 @@ _MembersSection(
             },
           ),
           IconButton(
-            icon: const Icon(Icons.swap_horiz, color: Color(0xFF5B8DEF)),
+            icon: const Icon(Icons.swap_horiz, color: AppColors.primary),
             tooltip: 'Swap or Reassign',
             onPressed: () {
               final uid =
@@ -994,7 +986,7 @@ _MembersSection(
                             }
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF5B8DEF),
+                            backgroundColor: AppColors.primary,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
                               vertical: 4,
@@ -1080,7 +1072,7 @@ _MembersSection(
                 final text = data['text'] as String? ?? 'Activity';
                 final createdAt = data['createdAt'] as Timestamp?;
                 final timeLabel = createdAt != null
-                    ? _formatRelativeTime(createdAt.toDate())
+                    ? formatRelativeTime(createdAt.toDate())
                     : (data['timeLabel'] as String? ?? '');
                 final actorPhotoUrl = data['actorPhotoUrl'] as String? ?? '';
                 return _ActivityTile(text, timeLabel, actorPhotoUrl);
@@ -1233,7 +1225,7 @@ class _MembersSectionState extends State<_MembersSection> {
                 Text(
                   _expanded ? 'Hide' : 'View Members',
                   style: const TextStyle(
-                    color: Color(0xFF5B8DEF),
+                    color: AppColors.primary,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1244,7 +1236,7 @@ class _MembersSectionState extends State<_MembersSection> {
                   duration: const Duration(milliseconds: 250),
                   child: const Icon(
                     Icons.keyboard_arrow_down,
-                    color: Color(0xFF5B8DEF),
+                    color: AppColors.primary,
                     size: 18,
                   ),
                 ),
@@ -1275,7 +1267,7 @@ class _MembersSectionState extends State<_MembersSection> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF4F6FB),
+                          color: AppColors.background,
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Row(

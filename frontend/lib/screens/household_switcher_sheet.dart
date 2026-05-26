@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
+import '../theme.dart';
 import 'create_household_screen.dart';
 import 'join_household_screen.dart';
 
@@ -240,12 +241,12 @@ class _HouseholdTileState extends State<_HouseholdTile> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 24),
       leading: CircleAvatar(
         backgroundColor: widget.isActive
-            ? const Color(0xFF5B8DEF).withValues(alpha: 0.15)
+            ? AppColors.primary.withValues(alpha: 0.15)
             : Colors.grey.shade100,
         child: Icon(
           Icons.home,
           color:
-              widget.isActive ? const Color(0xFF5B8DEF) : Colors.grey.shade500,
+              widget.isActive ? AppColors.primary : Colors.grey.shade500,
           size: 20,
         ),
       ),
@@ -255,7 +256,7 @@ class _HouseholdTileState extends State<_HouseholdTile> {
           fontWeight:
               widget.isActive ? FontWeight.w700 : FontWeight.w500,
           color: widget.isActive
-              ? const Color(0xFF5B8DEF)
+              ? AppColors.primary
               : Colors.black87,
         ),
       ),
@@ -267,13 +268,13 @@ class _HouseholdTileState extends State<_HouseholdTile> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFF5B8DEF).withValues(alpha: 0.12),
+                color: AppColors.primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Text(
                 'Active',
                 style: TextStyle(
-                  color: Color(0xFF5B8DEF),
+                  color: AppColors.primary,
                   fontWeight: FontWeight.w600,
                   fontSize: 12,
                 ),

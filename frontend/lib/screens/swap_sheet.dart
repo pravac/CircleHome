@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../services/firestore_service.dart';
+import '../theme.dart';
 
 enum _SwapStep { chooseType, chooseMember, chooseTask }
 
@@ -136,7 +137,7 @@ class _SwapSheetState extends State<_SwapSheet> {
           const SizedBox(height: 20),
           _optionTile(
             icon: Icons.swap_horiz,
-            color: const Color(0xFF5B8DEF),
+            color: AppColors.primary,
             title: 'Swap Tasks',
             subtitle: 'Trade this task for another member\'s task',
             onTap: () => setState(() {
@@ -212,7 +213,7 @@ class _SwapSheetState extends State<_SwapSheet> {
                     contentPadding: EdgeInsets.zero,
                     leading: CircleAvatar(
                       backgroundColor:
-                          const Color(0xFF5B8DEF).withValues(alpha: 0.15),
+                          AppColors.primary.withValues(alpha: 0.15),
                       backgroundImage: photoUrl.isNotEmpty
                           ? NetworkImage(photoUrl)
                           : null,
@@ -222,7 +223,7 @@ class _SwapSheetState extends State<_SwapSheet> {
                                   ? name[0].toUpperCase()
                                   : '?',
                               style: const TextStyle(
-                                color: Color(0xFF5B8DEF),
+                                color: AppColors.primary,
                                 fontWeight: FontWeight.bold,
                               ),
                             )

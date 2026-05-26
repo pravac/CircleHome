@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import '../theme.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/firestore_service.dart';
 
@@ -203,7 +204,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -240,7 +241,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             CircleAvatar(
                               radius: 52,
                               backgroundColor:
-                                  const Color(0xFF5B8DEF).withValues(alpha: 0.15),
+                                  AppColors.primary.withValues(alpha: 0.15),
                               backgroundImage: avatarImage,
                               onBackgroundImageError:
                                   avatarImage != null ? (_, _) {} : null,
@@ -250,7 +251,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       style: const TextStyle(
                                         fontSize: 32,
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xFF5B8DEF),
+                                        color: AppColors.primary,
                                       ),
                                     )
                                   : null,
@@ -261,7 +262,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: Container(
                                 padding: const EdgeInsets.all(6),
                                 decoration: const BoxDecoration(
-                                  color: Color(0xFF5B8DEF),
+                                  color: AppColors.primary,
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
@@ -445,7 +446,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: ElevatedButton(
                           onPressed: _saving ? null : _save,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF5B8DEF),
+                            backgroundColor: AppColors.primary,
                             padding:
                                 const EdgeInsets.symmetric(vertical: 18),
                             shape: RoundedRectangleBorder(

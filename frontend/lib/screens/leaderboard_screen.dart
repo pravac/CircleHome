@@ -13,13 +13,13 @@ class LeaderboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     if (householdId.isEmpty) {
       return const Scaffold(
-        backgroundColor: Color(0xFFF4F6FB),
+        backgroundColor: AppColors.background,
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -389,7 +389,7 @@ class _RankRow extends StatelessWidget {
           const SizedBox(width: 4),
           CircleAvatar(
             radius: 20,
-            backgroundColor: const Color(0xFF5B8DEF).withValues(alpha: 0.15),
+            backgroundColor: AppColors.primary.withValues(alpha: 0.15),
             backgroundImage: photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
             child: photoUrl.isEmpty
                 ? Text(
@@ -397,7 +397,7 @@ class _RankRow extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF5B8DEF),
+                      color: AppColors.primary,
                     ),
                   )
                 : null,
@@ -429,7 +429,7 @@ class _RankRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: rank <= 3
                   ? rankColor.withValues(alpha: 0.12)
-                  : const Color(0xFF5B8DEF).withValues(alpha: 0.1),
+                  : AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -437,7 +437,7 @@ class _RankRow extends StatelessWidget {
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 14,
-                color: rank <= 3 ? rankColor : const Color(0xFF5B8DEF),
+                color: rank <= 3 ? rankColor : AppColors.primary,
               ),
             ),
           ),

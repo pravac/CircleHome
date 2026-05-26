@@ -1,0 +1,98 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // A user is authenticated
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // The requesting user's uid matches the document owner
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+
+    // The requesting user belongs to the given household
+    function inHousehold(householdId) {
+      return isAuth() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.householdId == householdId;
+    }
+
+    // The requesting user is the owner of the given household
+    function isHouseholdOwner(householdId) {
+      return isAuth() &&
+        get(/databases/$(database)/documents/households/$(householdId)).data.ownerId == request.auth.uid;
+    }
+
+    // ── users ──────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      // Any authenticated user can read any user profile (needed for member lists)
+      allow read: if isAuth();
+      // Only the user themselves can write their own document
+      allow write: if isOwner(userId);
+    }
+
+    // ── households ─────────────────────────────────────────────────────────
+    match /households/{householdId} {
+      // Any member of the household can read it
+      allow read: if inHousehold(householdId);
+      // Any authenticated user can create a household (they become the owner)
+      allow create: if isAuth();
+      // Only the household owner can update or delete
+      allow update, delete: if isHouseholdOwner(householdId);
+    }
+
+    // ── tasks ──────────────────────────────────────────────────────────────
+    match /tasks/{taskId} {
+      // Any household member can read tasks
+      allow read: if isAuth() &&
+        inHousehold(resource.data.householdId);
+      // Any household member can create tasks
+      allow create: if isAuth() &&
+        inHousehold(request.resource.data.householdId);
+      // Any household member can update or delete tasks (complete, reassign, etc.)
+      allow update, delete: if isAuth() &&
+        inHousehold(resource.data.householdId);
+    }
+
+    // ── activities ─────────────────────────────────────────────────────────
+    match /activities/{activityId} {
+      // Any household member can read the activity feed
+      allow read: if isAuth() &&
+        inHousehold(resource.data.householdId);
+      // Any household member can write activity entries
+      allow create: if isAuth() &&
+        inHousehold(request.resource.data.householdId);
+      // Activities are immutable — no updates or deletes
+      allow update, delete: if false;
+    }
+
+    // ── careNotes ──────────────────────────────────────────────────────────
+    match /careNotes/{noteId} {
+      allow read: if isAuth() &&
+        inHousehold(resource.data.householdId);
+      allow create: if isAuth() &&
+        inHousehold(request.resource.data.householdId);
+      // Author or household owner can delete; no edits (add new note instead)
+      allow delete: if isAuth() &&
+        inHousehold(resource.data.householdId);
+      allow update: if false;
+    }
+
+    // ── swapRequests ───────────────────────────────────────────────────────
+    match /swapRequests/{requestId} {
+      // Sender or recipient can read
+      allow read: if isAuth() && (
+        resource.data.fromUserId == request.auth.uid ||
+        resource.data.toUserId == request.auth.uid
+      );
+      // Any authenticated user can create a swap request
+      allow create: if isAuth() &&
+        request.resource.data.fromUserId == request.auth.uid;
+      // Only the recipient can update (accept/reject); sender cannot retract via app
+      allow update: if isAuth() &&
+        resource.data.toUserId == request.auth.uid;
+      allow delete: if false;
+    }
+  }
+}

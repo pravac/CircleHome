@@ -59,7 +59,7 @@ class _MainShellState extends State<MainShell> {
         onPressed: () => showAddTaskDialog(context, _householdId.value),
         icon: const Icon(Icons.add),
         label: const Text('Add Task'),
-        backgroundColor: const Color(0xFF5B8DEF),
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       );
     }
@@ -68,7 +68,7 @@ class _MainShellState extends State<MainShell> {
         onPressed: () => showAddCareNoteSheet(context, _householdId.value),
         icon: const Icon(Icons.add),
         label: const Text('Add Note'),
-        backgroundColor: const Color(0xFF5B8DEF),
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       );
     }
@@ -210,7 +210,7 @@ class _LoadingPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      backgroundColor: Color(0xFFF4F6FB),
+      backgroundColor: AppColors.background,
       body: Center(child: CircularProgressIndicator()),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/firestore_service.dart';
+import '../theme.dart';
 
 class CreateHouseholdScreen extends StatefulWidget {
   const CreateHouseholdScreen({super.key});
@@ -58,9 +59,9 @@ class _CreateHouseholdScreenState extends State<CreateHouseholdScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF4F6FB),
+        backgroundColor: AppColors.background,
         elevation: 0,
         title: const Text('Create Household'),
       ),

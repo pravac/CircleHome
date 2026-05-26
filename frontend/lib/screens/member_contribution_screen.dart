@@ -39,7 +39,7 @@ class MemberContributionScreen extends StatelessWidget {
         .toUpperCase();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
