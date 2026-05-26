@@ -12,10 +12,15 @@ service cloud.firestore {
       return request.auth.uid == uid;
     }
 
-    // The requesting user belongs to the given household
+    // The requesting user belongs to the given household.
+    // Checks both householdIds array (multi-household) and householdId (active)
+    // to handle older documents that predate the householdIds array field.
     function inHousehold(householdId) {
-      return isAuth() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.householdId == householdId;
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return isAuth() && (
+        ('householdIds' in userData && householdId in userData.householdIds) ||
+        userData.householdId == householdId
+      );
     }
 
     // The requesting user is the owner of the given household
@@ -34,8 +39,10 @@ service cloud.firestore {
 
     // ── households ─────────────────────────────────────────────────────────
     match /households/{householdId} {
-      // Any member of the household can read it
-      allow read: if inHousehold(householdId);
+      // Any authenticated user can query households (needed to look up by invite code)
+      allow list: if isAuth();
+      // Only members can read a specific household document
+      allow get: if inHousehold(householdId);
       // Any authenticated user can create a household (they become the owner)
       allow create: if isAuth();
       // Only the household owner can update or delete

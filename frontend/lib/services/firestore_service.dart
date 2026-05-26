@@ -506,20 +506,6 @@ Future<void> renameUserInHouseholds({
     for (final doc in taskQuery.docs) {
       batch.update(doc.reference, {'assignedTo': newName});
     }
-
-    final activityQuery = await _db
-        .collection('activities')
-        .where('householdId', isEqualTo: householdId)
-        .where('actorName', isEqualTo: oldName)
-        .get();
-    for (final doc in activityQuery.docs) {
-      final actData = doc.data();
-      final text = (actData['text'] as String? ?? '').replaceFirst(oldName, newName);
-      batch.update(doc.reference, {
-        'actorName': newName,
-        'text': text,
-      });
-    }
   }
 
   await batch.commit();
