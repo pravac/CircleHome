@@ -80,6 +80,43 @@ CircleHome/
 └── firebase.json
 ```
 
+## User Guide
+
+**1. Create an account**
+Open the app and tap **Sign Up**. Enter your email and password. After signing up you will be taken to the home screen.
+
+**2. Create or join a household**
+- To create: go to **Settings → Create Household**, enter a name, and an invite code will be generated.
+- To join: go to **Settings → Join Household** and enter the invite code someone shared with you.
+- To switch between households: tap the household name at the top of the home screen.
+
+**3. Set up your profile**
+Go to **Profile** (bottom nav). Set your display name, profile photo, and weekly workload level (1–5). The workload level is used by auto-assign when distributing tasks.
+
+**4. Create a task**
+Tap the **+** button on the Tasks screen. Fill in:
+- Title and category
+- Due date and optional time
+- Assignee — pick a specific member, assign to Everyone, or use Auto-Assign
+- Difficulty (1–5) — this determines how many points the assignee earns on completion
+- Toggle Recurring on if the task should repeat, then choose a frequency
+
+**5. Manage tasks**
+- **My Tasks / All Tasks** — toggle at the top of the task feed to switch views
+- **Filter by status** — filter tasks by incomplete, complete, or overdue
+- **Complete a task** — tap the checkmark; an Undo option appears briefly in the snackbar
+- **Edit a task** — tap the task to open it, then tap Edit
+- **Swap a task** — tap Swap on any task assigned to you to request a reassignment to another member
+
+**6. Leaderboard**
+Tap **Leaderboard** in the bottom nav to see household members ranked by points. Points are weighted by task difficulty. Tap any member to see their individual contribution history.
+
+**7. Care Diary**
+Tap **Care** in the bottom nav to view and add care notes. Tap **Add Note**, choose a category (General, Medication, Appointment, Emergency), fill in the details, and optionally note who the entry is about. Emergency notes are highlighted in red.
+
+**8. Notifications**
+Allow notifications when prompted on first launch. You will receive a push notification when a task is assigned to you.
+
 ## Security
 
 Firestore rules enforce that users can only read and write their own profile, household data is scoped to members, tasks and care notes are scoped to the household, swap requests are only visible to the two people involved, and the activity feed is append only.
